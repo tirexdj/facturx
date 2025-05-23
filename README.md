@@ -1,66 +1,68 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# FacturX
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Application de gestion commerciale et facturation électronique pour TPE/PME.
 
-## About Laravel
+## À propos
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+FacturX est une solution SaaS conçue pour permettre aux TPE/PME françaises de gérer leur cycle commercial et de se conformer à la réglementation française sur la facturation électronique.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Calendrier réglementaire
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- 1er septembre 2026 : Obligation de réception des factures électroniques pour toutes les entreprises
+- 1er septembre 2027 : Obligation d'émission des factures électroniques pour les TPE/PME
 
-## Learning Laravel
+## Technologies
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+- Backend : Laravel 10+ avec PHP 8.4
+- Frontend : Vue.js 3 avec Nuxt 3
+- Base de données : PostgreSQL
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+## Fonctionnalités
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- Gestion complète du cycle commercial (clients, produits, devis, factures)
+- Conformité avec la réglementation de facturation électronique française
+- Connexion aux Plateformes de Dématérialisation Partenaires (PDP)
+- Génération de factures aux formats réglementaires (UBL, CII, Factur-X)
+- Tableaux de bord et rapports d'analyse
 
-## Laravel Sponsors
+## Installation
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+```bash
+# Cloner le dépôt
+git clone https://github.com/tirexdj/facturx.git
 
-### Premium Partners
+# Se déplacer dans le répertoire
+cd facturx
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+# Installer les dépendances
+composer install
+npm install
 
-## Contributing
+# Copier le fichier d'environnement
+cp .env.example .env
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+# Générer la clé d'application
+php artisan key:generate
 
-## Code of Conduct
+# Configurer votre base de données dans .env puis migrer
+php artisan migrate
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+# Compiler les assets
+npm run dev
+```
 
-## Security Vulnerabilities
+## Tests
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+php artisan test
+```
 
-## License
+## A propos de Laravel
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+FacturX est construit avec Laravel, un framework d'application web avec une syntaxe élégante et expressive. Laravel facilite le développement en simplifiant les tâches courantes utilisées dans de nombreux projets web.
+
+Laravel est accessible, puissant et fournit les outils nécessaires pour les applications robustes et à grande échelle.
+
+## Licence
+
+Informations sur la licence à définir.
