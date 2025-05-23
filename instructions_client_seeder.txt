@@ -1,0 +1,44 @@
+Le fichier ClientSeeder.php a besoin d'être entièrement restructuré pour s'adapter à la structure des modèles de l'application. Voici les modifications à réaliser pour le reste du fichier:
+
+1. Tous les client_id doivent être remplacés par les UUID des entreprises:
+   - 'company_id' => 1 → 'company_id' => $plomberieDupont->id
+   - 'company_id' => 2 → 'company_id' => $boulangerie->id
+   - 'company_id' => 3 → 'company_id' => $construction->id 
+   - 'company_id' => 4 → 'company_id' => $techSolutions->id
+
+2. Adapter le modèle Client avec:
+   - type → client_type ('individual' ou 'company')
+   - first_name/last_name → name (pour les particuliers)
+   - company_name → name (pour les entreprises)
+   - company_legal_name → legal_name
+   - company_registration_number → siren
+   - company_tax_number → vat_number
+   - category → tags (en format JSON avec json_encode(['regular']), ['key_account'], etc.)
+   
+3. Remplacer ClientAddress par Address:
+   - addressable_type => Client::class
+   - addressable_id => $client->id
+   - address_line_1 → address_line1
+   - address_line_2 → address_line2
+   - country → country_code
+   - state → state_province
+   - Ajouter is_billing/is_shipping si nécessaire
+   
+4. Remplacer ClientContact par Contact:
+   - contactable_type => Client::class
+   - contactable_id => $client->id
+   - position → job_title
+   
+5. Ajouter la gestion des emails avec Email:
+   - emailable_type => Contact::class ou Client::class
+   - emailable_id => $contact->id ou $client->id
+   - Ajouter is_default et is_verified
+   
+6. Ajouter la gestion des téléphones avec PhoneNumber:
+   - phoneable_type => Contact::class ou Client::class
+   - phoneable_id => $contact->id ou $client->id
+   - country_code => '+33' (pour les numéros français)
+   - number => version sans espaces du numéro
+   - is_default/is_mobile à définir selon le contexte
+
+Cette restructuration assure que les données sont correctement insérées dans la base de données selon les modèles définis.
