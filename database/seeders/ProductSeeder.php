@@ -2,10 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\Product;
-use App\Models\ProductCategory;
-use App\Models\ProductTaxRate;
 use Illuminate\Database\Seeder;
+use App\Domain\Product\Models\Product;
 
 class ProductSeeder extends Seeder
 {

@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateFacturxTables extends Migration
+class CreateFacturxTable extends Migration
 {
     /**
      * Run the migrations.
@@ -326,7 +326,7 @@ class CreateFacturxTables extends Migration
             $table->uuid('company_id');
             $table->string('name');
             $table->string('slug');
-            $table->uuid('parent_id')->nullable();
+            $table->uuid('parent_id')->nullable(); // Define the column
             $table->enum('type', ['product', 'service', 'client', 'expense'])->default('product');
             $table->text('description')->nullable();
             $table->string('color', 7)->nullable();
@@ -337,16 +337,15 @@ class CreateFacturxTables extends Migration
             $table->uuid('created_by')->nullable();
             $table->uuid('updated_by')->nullable();
             $table->uuid('deleted_by')->nullable();
-            
+
             // Index
             $table->index('company_id');
-            $table->index('parent_id');
+            $table->index('parent_id'); // Index for the foreign key
             $table->index('slug');
             $table->index('type');
-            
-            // Foreign keys
+
+            // Foreign keys (excluding the self-referencing one for now)
             $table->foreign('company_id')->references('id')->on('companies');
-            $table->foreign('parent_id')->references('id')->on('categories');
         });
         
         // Units
@@ -553,6 +552,14 @@ class CreateFacturxTables extends Migration
             $table->foreign('vat_rate_id')->references('id')->on('vat_rates');
             $table->foreign('unit_id')->references('id')->on('units');
             $table->foreign('category_id')->references('id')->on('categories');
+        });
+
+        Schema::table('categories', function (Blueprint $table) {
+          $table->foreign('parent_id')
+                ->references('id')
+                ->on('categories')
+                ->onDelete('set null') // Optional: Consider ON DELETE behavior (e.g., set null, cascade)
+                ->onUpdate('cascade'); // Optional: Consider ON UPDATE behavior
         });
         
         // Payment Terms
