@@ -16,6 +16,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 
 class Plan extends Model implements HasMedia
 {
+    /** @use HasFactory<\Database\Factories\PlanFactory> */
     use HasFactory, HasUuids, SoftDeletes, InteractsWithMedia;
 
     /**
@@ -80,5 +81,15 @@ class Plan extends Model implements HasMedia
     public function planFeatures(): HasMany
     {
         return $this->hasMany(PlanFeature::class);
+    }
+
+    /**
+     * Create a new factory instance for the model.
+     *
+     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     */
+    protected static function newFactory()
+    {
+        return \Database\Factories\PlanFactory::new();
     }
 }

@@ -1,0 +1,19 @@
+<?php
+
+namespace Tests\Feature\Api\V1;
+
+use Tests\TestCase;
+
+class ApiVersioningDebugTest extends TestCase
+{
+    public function test_debug_api_versioning(): void
+    {
+        $response = $this->getJson('/api/v1/non-existent-route');
+
+        echo "Response status: " . $response->getStatusCode() . "\n";
+        echo "Response headers: " . json_encode($response->headers->all()) . "\n";
+        echo "Response content: " . $response->getContent() . "\n";
+
+        $response->assertStatus(404);
+    }
+}

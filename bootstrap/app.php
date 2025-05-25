@@ -32,50 +32,68 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
+        // Helper function to extract API version from request
+        $getApiVersion = function (Request $request) {
+            if ($request->is('api/v*')) {
+                $segments = explode('/', $request->path());
+                foreach ($segments as $segment) {
+                    if (str_starts_with($segment, 'v')) {
+                        return $segment;
+                    }
+                }
+            }
+            return 'v1'; // default version
+        };
+
         // API Exception handling
-        $exceptions->render(function (AuthenticationException $e, Request $request) {
+        $exceptions->render(function (AuthenticationException $e, Request $request) use ($getApiVersion) {
             if ($request->is('api/*')) {
+                $version = $getApiVersion($request);
                 return response()->json([
                     'message' => 'Unauthenticated.',
                     'error' => 'authentication_required'
-                ], 401);
+                ], 401)->header('API-Version', $version);
             }
         });
 
-        $exceptions->render(function (AccessDeniedHttpException $e, Request $request) {
+        $exceptions->render(function (AccessDeniedHttpException $e, Request $request) use ($getApiVersion) {
             if ($request->is('api/*')) {
+                $version = $getApiVersion($request);
                 return response()->json([
                     'message' => 'Access denied.',
                     'error' => 'access_denied'
-                ], 403);
+                ], 403)->header('API-Version', $version);
             }
         });
 
-        $exceptions->render(function (NotFoundHttpException $e, Request $request) {
+        $exceptions->render(function (NotFoundHttpException $e, Request $request) use ($getApiVersion) {
             if ($request->is('api/*')) {
+                $version = $getApiVersion($request);
                 return response()->json([
                     'message' => 'Resource not found.',
                     'error' => 'not_found'
-                ], 404);
+                ], 404)->header('API-Version', $version);
             }
         });
 
-        $exceptions->render(function (ValidationException $e, Request $request) {
+        $exceptions->render(function (ValidationException $e, Request $request) use ($getApiVersion) {
             if ($request->is('api/*')) {
+                $version = $getApiVersion($request);
                 return response()->json([
                     'message' => 'The given data was invalid.',
                     'error' => 'validation_failed',
                     'errors' => $e->errors()
-                ], 422);
+                ], 422)->header('API-Version', $version);
             }
         });
 
-        $exceptions->render(function (\Exception $e, Request $request) {
+        $exceptions->render(function (\Exception $e, Request $request) use ($getApiVersion) {
             if ($request->is('api/*') && !config('app.debug')) {
+                $version = $getApiVersion($request);
                 return response()->json([
                     'message' => 'An error occurred while processing your request.',
                     'error' => 'internal_server_error'
-                ], 500);
+                ], 500)->header('API-Version', $version);
             }
         });
     })->create();

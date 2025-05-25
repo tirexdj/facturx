@@ -24,7 +24,8 @@ class ApiVersioning
         // Add version to response headers
         $response = $next($request);
         
-        if ($response instanceof \Illuminate\Http\JsonResponse) {
+        // Add API-Version header to all responses for API routes
+        if ($request->is('api/*')) {
             $response->headers->set('API-Version', $version);
         }
 

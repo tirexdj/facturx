@@ -1,0 +1,139 @@
+<?php
+
+namespace Database\Factories\Domain\Company\Models;
+
+use App\Domain\Company\Models\Plan;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+/**
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Domain\Company\Models\Plan>
+ */
+class PlanFactory extends Factory
+{
+    /**
+     * The name of the factory's corresponding model.
+     *
+     * @var string
+     */
+    protected $model = Plan::class;
+
+    /**
+     * Define the model's default state.
+     *
+     * @return array<string, mixed>
+     */
+    public function definition(): array
+    {
+        return [
+            'name' => $this->faker->randomElement(['Free', 'Starter', 'Business', 'Premium']),
+            'code' => $this->faker->unique()->slug(),
+            'description' => $this->faker->sentence(),
+            'price_monthly' => $this->faker->randomFloat(2, 0, 100),
+            'price_yearly' => $this->faker->randomFloat(2, 0, 1000),
+            'currency_code' => 'EUR',
+            'is_active' => true,
+            'is_public' => true,
+            'trial_days' => $this->faker->numberBetween(0, 30),
+        ];
+    }
+
+    /**
+     * Indicate that the plan is the free plan.
+     *
+     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     */
+    public function free(): Factory
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'name' => 'Free',
+                'code' => 'free',
+                'price_monthly' => 0.00,
+                'price_yearly' => 0.00,
+                'trial_days' => 0,
+            ];
+        });
+    }
+
+    /**
+     * Indicate that the plan is a starter plan.
+     *
+     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     */
+    public function starter(): Factory
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'name' => 'Starter',
+                'code' => 'starter',
+                'price_monthly' => 9.90,
+                'price_yearly' => 99.00,
+                'trial_days' => 14,
+            ];
+        });
+    }
+
+    /**
+     * Indicate that the plan is a business plan.
+     *
+     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     */
+    public function business(): Factory
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'name' => 'Business',
+                'code' => 'business',
+                'price_monthly' => 19.90,
+                'price_yearly' => 199.00,
+                'trial_days' => 14,
+            ];
+        });
+    }
+
+    /**
+     * Indicate that the plan is a premium plan.
+     *
+     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     */
+    public function premium(): Factory
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'name' => 'Premium',
+                'code' => 'premium',
+                'price_monthly' => 39.90,
+                'price_yearly' => 399.00,
+                'trial_days' => 30,
+            ];
+        });
+    }
+
+    /**
+     * Indicate that the plan is inactive.
+     *
+     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     */
+    public function inactive(): Factory
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'is_active' => false,
+            ];
+        });
+    }
+
+    /**
+     * Indicate that the plan is not public.
+     *
+     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     */
+    public function private(): Factory
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'is_public' => false,
+            ];
+        });
+    }
+}

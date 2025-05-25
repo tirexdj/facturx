@@ -27,9 +27,9 @@ Route::get('/health', function () {
 Route::prefix('v1')->group(function () {
     // Public routes (no authentication required)
     Route::prefix('auth')->group(function () {
-        Route::post('/login', [\App\Http\Controllers\Api\V1\Auth\AuthController::class, 'login']);
+        Route::post('/login', [\App\Http\Controllers\Api\V1\Auth\AuthController::class, 'login'])->middleware('throttle:login');
         Route::post('/register', [\App\Http\Controllers\Api\V1\Auth\AuthController::class, 'register']);
-        Route::post('/forgot-password', [\App\Http\Controllers\Api\V1\Auth\AuthController::class, 'forgotPassword']);
+        Route::post('/forgot-password', [\App\Http\Controllers\Api\V1\Auth\AuthController::class, 'forgotPassword'])->middleware('throttle:login');
         Route::post('/reset-password', [\App\Http\Controllers\Api\V1\Auth\AuthController::class, 'resetPassword']);
     });
 

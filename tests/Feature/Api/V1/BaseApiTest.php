@@ -89,43 +89,43 @@ abstract class BaseApiTest extends TestCase
     }
 
     /**
-     * Make a GET request to the API.
+     * Make an API GET request with proper headers.
      */
-    public function getJson($uri, array $headers = []): \Illuminate\Testing\TestResponse
+    protected function apiGet(string $uri, array $headers = []): \Illuminate\Testing\TestResponse
     {
-        return parent::getJson($uri, $this->getApiHeaders($headers));
+        return $this->getJson($uri, $this->getApiHeaders($headers));
     }
 
     /**
-     * Make a POST request to the API.
+     * Make an API POST request with proper headers.
      */
-    public function postJson($uri, array $data = [], array $headers = []): \Illuminate\Testing\TestResponse
+    protected function apiPost(string $uri, array $data = [], array $headers = []): \Illuminate\Testing\TestResponse
     {
-        return parent::postJson($uri, $data, $this->getApiHeaders($headers));
+        return $this->postJson($uri, $data, $this->getApiHeaders($headers));
     }
 
     /**
-     * Make a PUT request to the API.
+     * Make an API PUT request with proper headers.
      */
-    protected function putJson($uri, array $data = [], array $headers = []): \Illuminate\Testing\TestResponse
+    protected function apiPut(string $uri, array $data = [], array $headers = []): \Illuminate\Testing\TestResponse
     {
-        return parent::putJson($uri, $data, $this->getApiHeaders($headers));
+        return $this->putJson($uri, $data, $this->getApiHeaders($headers));
     }
 
     /**
-     * Make a PATCH request to the API.
+     * Make an API PATCH request with proper headers.
      */
-    protected function patchJson($uri, array $data = [], array $headers = []): \Illuminate\Testing\TestResponse
+    protected function apiPatch(string $uri, array $data = [], array $headers = []): \Illuminate\Testing\TestResponse
     {
-        return parent::patchJson($uri, $data, $this->getApiHeaders($headers));
+        return $this->patchJson($uri, $data, $this->getApiHeaders($headers));
     }
 
     /**
-     * Make a DELETE request to the API.
+     * Make an API DELETE request with proper headers.
      */
-    protected function deleteJson($uri, array $data = [], array $headers = []): \Illuminate\Testing\TestResponse
+    protected function apiDelete(string $uri, array $data = [], array $headers = []): \Illuminate\Testing\TestResponse
     {
-        return parent::deleteJson($uri, $data, $this->getApiHeaders($headers));
+        return $this->deleteJson($uri, $data, $this->getApiHeaders($headers));
     }
 
     /**
