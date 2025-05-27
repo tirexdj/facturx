@@ -1,74 +1,176 @@
+version: '3.8'
+
 services:
-    laravel.test:
-        build:
-            context: './vendor/laravel/sail/runtimes/8.4'
-            dockerfile: Dockerfile
-            args:
-                WWWGROUP: '${WWWGROUP}'
-        image: 'sail-8.4/app'
-        extra_hosts:
-            - 'host.docker.internal:host-gateway'
-        ports:
-            - '${APP_PORT:-80}:80'
-            - '${VITE_PORT:-5173}:${VITE_PORT:-5173}'
-        environment:
-            WWWUSER: '${WWWUSER}'
-            LARAVEL_SAIL: 1
-            XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
-            XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
-            IGNITION_LOCAL_SITES_PATH: '${PWD}'
-        volumes:
-            - '.:/var/www/html'
-        networks:
-            - sail
-        depends_on:
-            - pgsql
-            - redis
-    pgsql:
-        image: 'postgres:17'
-        ports:
-            - '${FORWARD_DB_PORT:-5432}:5432'
-        environment:
-            PGPASSWORD: '${DB_PASSWORD:-secret}'
-            POSTGRES_DB: '${DB_DATABASE}'
-            POSTGRES_USER: '${DB_USERNAME}'
-            POSTGRES_PASSWORD: '${DB_PASSWORD:-secret}'
-        volumes:
-            - 'sail-pgsql:/var/lib/postgresql/data'
-            - './vendor/laravel/sail/database/pgsql/create-testing-database.sql:/docker-entrypoint-initdb.d/10-create-testing-database.sql'
-        networks:
-            - sail
-        healthcheck:
-            test:
-                - CMD
-                - pg_isready
-                - '-q'
-                - '-d'
-                - '${DB_DATABASE}'
-                - '-U'
-                - '${DB_USERNAME}'
-            retries: 3
-            timeout: 5s
-    redis:
-        image: 'redis:alpine'
-        ports:
-            - '${FORWARD_REDIS_PORT:-6379}:6379'
-        volumes:
-            - 'sail-redis:/data'
-        networks:
-            - sail
-        healthcheck:
-            test:
-                - CMD
-                - redis-cli
-                - ping
-            retries: 3
-            timeout: 5s
+  # Application PHP/Laravel
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: development
+    container_name: facturx_app
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    networks:
+      - facturx_network
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - APP_ENV=local
+      - DB_HOST=postgres
+      - DB_DATABASE=facturx
+      - DB_USERNAME=facturx
+      - DB_PASSWORD=password
+      - REDIS_HOST=redis
+
+  # Serveur web Nginx
+  nginx:
+    image: nginx:alpine
+    container_name: facturx_nginx
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    volumes:
+      - ./:/var/www
+      - ./docker/nginx:/etc/nginx/conf.d
+    networks:
+      - facturx_network
+    depends_on:
+      - app
+
+  # Base de données PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: facturx_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: facturx
+      POSTGRES_USER: facturx
+      POSTGRES_PASSWORD: password
+      POSTGRES_ROOT_PASSWORD: root_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - facturx_network
+
+  # Redis pour cache et sessions
+  redis:
+    image: redis:7-alpine
+    container_name: facturx_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - facturx_network
+    command: redis-server --appendonly yes
+
+  # Worker pour les jobs en arrière-plan
+  queue:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: development
+    container_name: facturx_queue
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+    networks:
+      - facturx_network
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - APP_ENV=local
+      - DB_HOST=postgres
+      - DB_DATABASE=facturx
+      - DB_USERNAME=facturx
+      - DB_PASSWORD=password
+      - REDIS_HOST=redis
+    command: php artisan queue:work --sleep=3 --tries=3
+
+  # Scheduler pour les tâches cron
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: development
+    container_name: facturx_scheduler
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+    networks:
+      - facturx_network
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - APP_ENV=local
+      - DB_HOST=postgres
+      - DB_DATABASE=facturx
+      - DB_USERNAME=facturx
+      - DB_PASSWORD=password
+      - REDIS_HOST=redis
+    command: supercrond
+
+  # Node.js pour le développement frontend
+  node:
+    image: node:20-alpine
+    container_name: facturx_node
+    working_dir: /app
+    volumes:
+      - ./:/app
+    ports:
+      - "5173:5173"
+    networks:
+      - facturx_network
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+
+  # Mailpit pour les tests d'emails en local
+  mailpit:
+    image: axllent/mailpit
+    container_name: facturx_mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - facturx_network
+
+  # MinIO pour le stockage S3 local
+  minio:
+    image: minio/minio
+    container_name: facturx_minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - facturx_network
+    environment:
+      - MINIO_ROOT_USER=facturx
+      - MINIO_ROOT_PASSWORD=password123
+    command: server /data --console-address ":9001"
+
 networks:
-    sail:
-        driver: bridge
+  facturx_network:
+    driver: bridge
+
 volumes:
-    sail-pgsql:
-        driver: local
-    sail-redis:
-        driver: local
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local

@@ -1,53 +1,310 @@
-name: Laravel CI
+name: FacturX CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, feature/* ]
   pull_request:
     branches: [ main, develop ]
 
 jobs:
-  laravel-tests:
+  # Tests et qualité du code
+  tests:
     runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: facturx_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    strategy:
+      matrix:
+        php-version: ['8.4']
+        dependency-version: [prefer-stable]
+
+    name: PHP ${{ matrix.php-version }} - ${{ matrix.dependency-version }}
 
     steps:
-    - uses: shivammathur/setup-php@v2
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
       with:
-        php-version: '8.2'
-        extensions: mbstring, dom, fileinfo
+        php-version: ${{ matrix.php-version }}
+        extensions: mbstring, dom, fileinfo, pgsql, redis, gd, zip, bcmath, soap, intl, exif, iconv, imagick
         coverage: xdebug
+        tools: composer:v2
 
-    - uses: actions/checkout@v3
+    - name: Get Composer Cache Directory
+      id: composer-cache
+      run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
 
-    - name: Copy .env
-      run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+    - name: Cache Composer dependencies
+      uses: actions/cache@v3
+      with:
+        path: ${{ steps.composer-cache.outputs.dir }}
+        key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+        restore-keys: ${{ runner.os }}-composer-
 
-    - name: Install Dependencies
-      run: composer install -q --no-ansi --no-interaction --no-progress --prefer-dist
+    - name: Copy environment file
+      run: cp .env.example .env.testing
 
-    - name: Generate key
-      run: php artisan key:generate
+    - name: Install Composer dependencies
+      run: composer install --no-progress --prefer-dist --optimize-autoloader --no-dev
 
-    - name: Directory Permissions
-      run: chmod -R 777 storage bootstrap/cache
+    - name: Install Composer dev dependencies
+      run: composer install --no-progress --prefer-dist --optimize-autoloader
 
-    - name: Create Database
+    - name: Set application key
+      run: php artisan key:generate --env=testing
+
+    - name: Set directory permissions
+      run: chmod -R 755 storage bootstrap/cache
+
+    - name: Clear and cache config
       run: |
-        mkdir -p database
-        touch database/database.sqlite
+        php artisan config:clear
+        php artisan config:cache --env=testing
 
-    - name: Execute tests (Unit and Feature tests) via PHPUnit
+    - name: Clear and cache routes
+      run: |
+        php artisan route:clear
+        php artisan route:cache
+
+    - name: Clear and cache views
+      run: |
+        php artisan view:clear
+        php artisan view:cache
+
+    - name: Run database migrations
       env:
-        DB_CONNECTION: sqlite
-        DB_DATABASE: database/database.sqlite
-      run: vendor/bin/phpunit --coverage-clover=coverage.xml
+        DB_CONNECTION: pgsql
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_DATABASE: facturx_test
+        DB_USERNAME: postgres
+        DB_PASSWORD: postgres
+        REDIS_HOST: localhost
+        REDIS_PORT: 6379
+      run: php artisan migrate --env=testing --force
 
-    - name: Code Style Check
-      run: |
-        composer require --dev friendsofphp/php-cs-fixer
-        vendor/bin/php-cs-fixer fix --dry-run --diff
+    - name: Seed database
+      env:
+        DB_CONNECTION: pgsql
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_DATABASE: facturx_test
+        DB_USERNAME: postgres
+        DB_PASSWORD: postgres
+      run: php artisan db:seed --env=testing --force
 
-    - name: Upload coverage to Codecov
+    - name: Run PHPUnit tests
+      env:
+        DB_CONNECTION: pgsql
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_DATABASE: facturx_test
+        DB_USERNAME: postgres
+        DB_PASSWORD: postgres
+        REDIS_HOST: localhost
+        REDIS_PORT: 6379
+      run: php artisan test --coverage-clover=coverage.xml --coverage-html=coverage-html
+
+    - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v3
       with:
         file: ./coverage.xml
+        flags: backend
+        name: facturx-backend-coverage
+
+  # Analyse statique du code
+  static-analysis:
+    runs-on: ubuntu-latest
+    name: Static Analysis
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.4'
+        extensions: mbstring, dom, fileinfo, pgsql, redis
+        tools: composer:v2
+
+    - name: Install dependencies
+      run: composer install --no-progress --prefer-dist --optimize-autoloader
+
+    - name: Run PHPStan
+      run: |
+        composer require --dev phpstan/phpstan
+        vendor/bin/phpstan analyse --memory-limit=2G
+
+    - name: Run PHP CS Fixer (dry-run)
+      run: |
+        composer require --dev friendsofphp/php-cs-fixer
+        vendor/bin/php-cs-fixer fix --dry-run --diff --verbose
+
+    - name: Run Rector (dry-run)
+      run: |
+        composer require --dev rector/rector
+        vendor/bin/rector process --dry-run
+
+  # Analyse de sécurité
+  security:
+    runs-on: ubuntu-latest
+    name: Security Analysis
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.4'
+        tools: composer:v2
+
+    - name: Install dependencies
+      run: composer install --no-progress --prefer-dist --optimize-autoloader
+
+    - name: Security Checker
+      run: |
+        composer require --dev sensiolabs/security-checker
+        vendor/bin/security-checker security:check composer.lock
+
+    - name: Run PHP Security Audit
+      uses: StephaneBour/actions-php-security-checker@1.1
+
+  # Tests de performance
+  performance:
+    runs-on: ubuntu-latest
+    name: Performance Tests
+    if: github.ref == 'refs/heads/main'
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: facturx_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.4'
+        extensions: mbstring, dom, fileinfo, pgsql, redis, gd, zip, bcmath, soap, intl
+
+    - name: Install dependencies
+      run: composer install --no-progress --prefer-dist --optimize-autoloader
+
+    - name: Run performance tests
+      env:
+        DB_CONNECTION: pgsql
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_DATABASE: facturx_test
+        DB_USERNAME: postgres
+        DB_PASSWORD: postgres
+      run: |
+        php artisan config:cache
+        php artisan route:cache
+        php artisan view:cache
+        php artisan migrate --force
+        # Ajouter ici vos tests de performance spécifiques
+
+  # Build et déploiement (seulement sur main)
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to Production
+    needs: [tests, static-analysis, security]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.4'
+        extensions: mbstring, dom, fileinfo, pgsql, redis, gd, zip, bcmath, soap, intl
+
+    - name: Install dependencies
+      run: composer install --no-dev --optimize-autoloader --no-progress --prefer-dist
+
+    - name: Create deployment artifact
+      env:
+        GITHUB_SHA: ${{ github.sha }}
+      run: tar -czf "${GITHUB_SHA}".tar.gz --exclude=*.git --exclude=node_modules *
+
+    - name: Store artifact for distribution
+      uses: actions/upload-artifact@v3
+      with:
+        name: app-build
+        path: ${{ github.sha }}.tar.gz
+
+    # Exemple de déploiement - à adapter selon votre infrastructure
+    - name: Deploy to server
+      if: success()
+      run: |
+        echo "Déploiement vers la production"
+        # Ajouter ici les commandes de déploiement spécifiques
+        # Par exemple, connexion SSH, upload des fichiers, redémarrage des services
+
+  # Notification Slack (optionnel)
+  notify:
+    runs-on: ubuntu-latest
+    name: Notify
+    needs: [tests, static-analysis, security]
+    if: always()
+
+    steps:
+    - name: Notify Slack on success
+      if: success()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: success
+        text: "✅ FacturX CI/CD Pipeline réussi"
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    - name: Notify Slack on failure
+      if: failure()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: failure
+        text: "❌ FacturX CI/CD Pipeline échoué"
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

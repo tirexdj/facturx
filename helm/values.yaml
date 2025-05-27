@@ -1,0 +1,270 @@
+# Configuration par défaut pour FacturX Helm Chart
+
+# Image configuration
+image:
+  repository: ghcr.io/your-username/facturx
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+# Nombre de répliques
+replicaCount: 3
+
+# Configuration du service
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 80
+
+# Configuration Ingress
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+  hosts:
+    - host: app.facturx.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: facturx-tls
+      hosts:
+        - app.facturx.com
+
+# Configuration des ressources
+resources:
+  app:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+  nginx:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "128Mi"
+      cpu: "100m"
+  worker:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "200m"
+
+# Configuration Autoscaling
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Configuration des workers
+workers:
+  enabled: true
+  replicaCount: 2
+  queues:
+    - default
+    - invoicing
+    - reporting
+
+# Configuration du scheduler
+scheduler:
+  enabled: true
+  schedule: "* * * * *"
+
+# Configuration de l'application Laravel
+app:
+  name: "FacturX"
+  env: "production"
+  debug: false
+  key: "" # Sera fourni via secret
+  url: "https://app.facturx.com"
+  timezone: "Europe/Paris"
+
+# Configuration de la base de données
+database:
+  # Utilise PostgreSQL interne
+  enabled: true
+  host: ""
+  port: 5432
+  database: "facturx_production"
+  username: "facturx"
+  password: "" # Sera fourni via secret
+
+# Configuration PostgreSQL (chart externe)
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: "postgres_password"
+    username: "facturx"
+    password: "facturx_password"
+    database: "facturx_production"
+  primary:
+    persistence:
+      enabled: true
+      size: 20Gi
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "250m"
+      limits:
+        memory: "1Gi"
+        cpu: "500m"
+
+# Configuration Redis
+cache:
+  enabled: true
+  host: ""
+  port: 6379
+  password: "" # Sera fourni via secret
+
+# Configuration Redis (chart externe)
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: "redis_password"
+  master:
+    persistence:
+      enabled: true
+      size: 8Gi
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "200m"
+
+# Configuration du stockage
+storage:
+  enabled: true
+  size: 10Gi
+  storageClass: "standard"
+  accessModes:
+    - ReadWriteMany
+
+# Configuration mail
+mail:
+  mailer: "smtp"
+  host: ""
+  port: 587
+  username: ""
+  password: "" # Sera fourni via secret
+  encryption: "tls"
+  fromAddress: "noreply@facturx.com"
+  fromName: "FacturX"
+
+# Configuration AWS S3
+aws:
+  region: "eu-west-3"
+  bucket: ""
+  accessKeyId: "" # Sera fourni via secret
+  secretAccessKey: "" # Sera fourni via secret
+
+# Configuration facturation électronique
+facturx:
+  ppf:
+    apiUrl: "https://api.ppf.gouv.fr"
+    apiKey: "" # Sera fourni via secret
+    environment: "production"
+  pdp:
+    testMode: false
+  company:
+    siren: ""
+    siret: ""
+    tva: ""
+
+# Configuration paiements
+payments:
+  stripe:
+    publishableKey: ""
+    secretKey: "" # Sera fourni via secret
+    webhookSecret: "" # Sera fourni via secret
+
+# Configuration monitoring
+monitoring:
+  sentry:
+    dsn: "" # Sera fourni via secret
+    tracesSampleRate: 0.1
+
+# Configuration sécurité
+security:
+  trustedProxies: "*"
+  sanctumDomains: "app.facturx.com"
+  sessionSecureCookie: true
+
+# Configuration des secrets
+secrets:
+  # Ces valeurs seront fournies lors du déploiement
+  appKey: ""
+  dbPassword: ""
+  redisPassword: ""
+  mailPassword: ""
+  awsAccessKeyId: ""
+  awsSecretAccessKey: ""
+  ppfApiKey: ""
+  stripeSecretKey: ""
+  stripeWebhookSecret: ""
+  sentryDsn: ""
+
+# Configuration des probes
+livenessProbe:
+  enabled: true
+  path: /health
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  enabled: true
+  path: /health
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Configuration réseau
+networkPolicy:
+  enabled: true
+  ingress:
+    enabled: true
+  egress:
+    enabled: true
+
+# Annotations pour les pods
+podAnnotations: {}
+
+# Labels pour les pods
+podLabels: {}
+
+# Configuration du security context
+podSecurityContext:
+  fsGroup: 1000
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+
+# Affinité des nodes
+nodeSelector: {}
+
+# Tolérance des nodes
+tolerations: []
+
+# Affinité des pods
+affinity: {}

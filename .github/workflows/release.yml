@@ -1,0 +1,440 @@
+name: Release Management
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v1.2.3)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Is this a pre-release?'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  # Validation de la release
+  validate-release:
+    runs-on: ubuntu-latest
+    name: Validate Release
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.4'
+        extensions: mbstring, dom, fileinfo, pgsql, redis
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: |
+        composer install --no-dev --optimize-autoloader
+        npm ci
+
+    - name: Run all tests
+      run: |
+        php artisan test
+        npm run test
+
+    - name: Build assets
+      run: npm run build
+
+    - name: Security audit
+      run: |
+        composer audit
+        npm audit
+
+    - name: Validate version format
+      run: |
+        VERSION="${{ github.event.inputs.version || github.ref_name }}"
+        if [[ ! $VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "Invalid version format: $VERSION"
+          echo "Expected format: vX.Y.Z"
+          exit 1
+        fi
+
+  # Construction des artifacts
+  build-artifacts:
+    runs-on: ubuntu-latest
+    name: Build Release Artifacts
+    needs: [validate-release]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.4'
+        extensions: mbstring, dom, fileinfo, pgsql, redis
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Install production dependencies
+      run: |
+        composer install --no-dev --optimize-autoloader --no-interaction
+        npm ci --production=false
+
+    - name: Build frontend assets
+      run: |
+        npm run build
+        npm run optimize
+
+    - name: Optimize Laravel
+      run: |
+        php artisan config:cache
+        php artisan route:cache
+        php artisan view:cache
+        php artisan event:cache
+
+    - name: Create application archive
+      run: |
+        tar --exclude='node_modules' \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='tests' \
+            --exclude='storage/logs/*' \
+            --exclude='storage/framework/cache/*' \
+            --exclude='storage/framework/sessions/*' \
+            --exclude='storage/framework/views/*' \
+            -czf facturx-${GITHUB_REF_NAME}.tar.gz .
+
+    - name: Upload application artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: facturx-app
+        path: facturx-*.tar.gz
+        retention-days: 30
+
+  # Construction des images Docker
+  build-docker:
+    runs-on: ubuntu-latest
+    name: Build Docker Images
+    needs: [validate-release]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ghcr.io/${{ github.repository }}
+        tags: |
+          type=ref,event=tag
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=semver,pattern={{major}}
+
+    - name: Build and push production image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: docker/Dockerfile
+        target: production
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Build and push queue worker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: docker/Dockerfile
+        target: queue
+        push: true
+        tags: |
+          ghcr.io/${{ github.repository }}:${{ github.ref_name }}-queue
+          ghcr.io/${{ github.repository }}:latest-queue
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  # Génération du changelog
+  generate-changelog:
+    runs-on: ubuntu-latest
+    name: Generate Changelog
+    needs: [validate-release]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Generate changelog
+      id: changelog
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { execSync } = require('child_process');
+          
+          const version = '${{ github.event.inputs.version || github.ref_name }}';
+          const previousTag = execSync('git describe --tags --abbrev=0 HEAD^', { encoding: 'utf8' }).trim();
+          
+          const commits = execSync(
+            `git log ${previousTag}..HEAD --pretty=format:"%h %s" --no-merges`,
+            { encoding: 'utf8' }
+          ).trim().split('\n').filter(line => line.length > 0);
+          
+          const features = [];
+          const fixes = [];
+          const others = [];
+          
+          commits.forEach(commit => {
+            const [hash, ...messageParts] = commit.split(' ');
+            const message = messageParts.join(' ');
+            
+            if (message.startsWith('feat')) {
+              features.push(`- ${message.replace(/^feat[:\(]?\s*/, '')} (${hash})`);
+            } else if (message.startsWith('fix')) {
+              fixes.push(`- ${message.replace(/^fix[:\(]?\s*/, '')} (${hash})`);
+            } else {
+              others.push(`- ${message} (${hash})`);
+            }
+          });
+          
+          let changelog = `## Changes in ${version}\n\n`;
+          
+          if (features.length > 0) {
+            changelog += `### ✨ New Features\n${features.join('\n')}\n\n`;
+          }
+          
+          if (fixes.length > 0) {
+            changelog += `### 🐛 Bug Fixes\n${fixes.join('\n')}\n\n`;
+          }
+          
+          if (others.length > 0) {
+            changelog += `### 🔄 Other Changes\n${others.join('\n')}\n\n`;
+          }
+          
+          changelog += `**Full Changelog**: https://github.com/${{ github.repository }}/compare/${previousTag}...${version}`;
+          
+          return changelog;
+
+    outputs:
+      changelog: ${{ steps.changelog.outputs.result }}
+
+  # Tests de migration en production
+  test-migration:
+    runs-on: ubuntu-latest
+    name: Test Production Migration
+    needs: [build-artifacts]
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: facturx_prod_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.4'
+        extensions: mbstring, dom, fileinfo, pgsql, redis
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: facturx-app
+
+    - name: Extract application
+      run: tar -xzf facturx-*.tar.gz
+
+    - name: Test database migration
+      env:
+        DB_CONNECTION: pgsql
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_DATABASE: facturx_prod_test
+        DB_USERNAME: postgres
+        DB_PASSWORD: postgres
+      run: |
+        cp .env.example .env
+        php artisan key:generate
+        php artisan migrate --force
+        php artisan db:seed --force
+
+  # Création de la release
+  create-release:
+    runs-on: ubuntu-latest
+    name: Create GitHub Release
+    needs: [build-artifacts, build-docker, generate-changelog, test-migration]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: facturx-app
+
+    - name: Create GitHub Release
+      uses: actions/create-release@v1
+      id: create_release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.event.inputs.version || github.ref_name }}
+        release_name: FacturX ${{ github.event.inputs.version || github.ref_name }}
+        body: |
+          ${{ needs.generate-changelog.outputs.changelog }}
+          
+          ## 📋 Installation
+          
+          ### Docker (Recommandé)
+          ```bash
+          docker pull ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+          ```
+          
+          ### Archive manuelle
+          Téléchargez l'archive ci-dessous et suivez les instructions d'installation.
+          
+          ## ⚠️ Notes importantes
+          
+          - Sauvegardez votre base de données avant la mise à jour
+          - Lisez attentivement le changelog pour les breaking changes
+          - Testez en environnement de staging avant la production
+          
+          ## 🆘 Support
+          
+          En cas de problème, consultez :
+          - [Documentation](https://docs.facturx.com)
+          - [Issues GitHub](https://github.com/${{ github.repository }}/issues)
+          - [Support](mailto:support@facturx.com)
+        draft: false
+        prerelease: ${{ github.event.inputs.prerelease || false }}
+
+    - name: Upload application archive
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./facturx-${{ github.ref_name }}.tar.gz
+        asset_name: facturx-${{ github.ref_name }}.tar.gz
+        asset_content_type: application/gzip
+
+  # Déploiement automatique (environnement de staging)
+  deploy-staging:
+    runs-on: ubuntu-latest
+    name: Deploy to Staging
+    needs: [create-release]
+    if: github.event.inputs.prerelease == 'false' || github.event.inputs.prerelease == ''
+
+    environment:
+      name: staging
+      url: https://staging.facturx.com
+
+    steps:
+    - name: Deploy to staging
+      run: |
+        echo "🚀 Déploiement vers l'environnement de staging..."
+        echo "Version: ${{ github.event.inputs.version || github.ref_name }}"
+        # Ajouter ici les commandes de déploiement spécifiques
+        # Par exemple: kubectl, helm, docker-compose, etc.
+
+    - name: Run smoke tests
+      run: |
+        echo "🧪 Exécution des tests de fumée..."
+        # Tests de base pour vérifier que l'application fonctionne
+        # curl -f https://staging.facturx.com/health
+
+    - name: Notify deployment
+      uses: actions/github-script@v7
+      with:
+        script: |
+          await github.rest.repos.createDeploymentStatus({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            deployment_id: context.payload.deployment?.id,
+            state: 'success',
+            environment_url: 'https://staging.facturx.com',
+            description: 'Deployed to staging successfully'
+          });
+
+  # Notification de release
+  notify-release:
+    runs-on: ubuntu-latest
+    name: Notify Release
+    needs: [create-release, deploy-staging]
+    if: always()
+
+    steps:
+    - name: Notify Slack
+      if: success()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: success
+        text: |
+          🎉 FacturX ${{ github.event.inputs.version || github.ref_name }} released!
+          
+          📦 Archive: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}
+          🐳 Docker: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+          🌟 Staging: https://staging.facturx.com
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    - name: Notify Discord
+      if: success()
+      uses: Ilshidur/action-discord@master
+      with:
+        args: |
+          🚀 **FacturX ${{ github.event.inputs.version || github.ref_name }}** vient d'être publié !
+          
+          📋 **Nouveautés :** Consultez le changelog sur GitHub
+          🔗 **Téléchargement :** https://github.com/${{ github.repository }}/releases/latest
+      env:
+        DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+
+    - name: Update documentation
+      if: success()
+      run: |
+        echo "📚 Mise à jour de la documentation..."
+        # Déclencher la mise à jour de la documentation
+        # curl -X POST -H "Authorization: token ${{ secrets.DOCS_TOKEN }}" \
+        #      -H "Content-Type: application/json" \
+        #      -d '{"ref":"main"}' \
+        #      https://api.github.com/repos/username/facturx-docs/dispatches

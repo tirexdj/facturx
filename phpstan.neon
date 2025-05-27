@@ -1,0 +1,30 @@
+parameters:
+    level: 8
+    paths:
+        - app
+        - config
+        - database
+        - routes
+    excludePaths:
+        - app/Console/Kernel.php
+        - app/Exceptions/Handler.php
+        - app/Http/Kernel.php
+        - app/Providers/RouteServiceProvider.php
+        - bootstrap
+        - storage
+        - vendor
+    ignoreErrors:
+        # Ignore some Laravel specific errors
+        - '#Call to an undefined method Illuminate\\Database\\Eloquent\\Builder#'
+        - '#Call to an undefined method Illuminate\\Database\\Query\\Builder#'
+    checkMissingIterableValueType: false
+    checkGenericClassInNonGenericObjectType: false
+    reportUnmatchedIgnoredErrors: false
+    tmpDir: build/phpstan
+    editorUrl: 'phpstorm://open?file=%%file%%&line=%%line%%'
+    doctrine:
+        repositoriesNamespace: App\Repositories
+        entitiesPath: app/Models
+    laravel:
+        additionalModelNamespaces:
+            - App\Models

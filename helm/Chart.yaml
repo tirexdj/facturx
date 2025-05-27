@@ -1,0 +1,28 @@
+apiVersion: v2
+name: facturx
+description: A Helm chart for FacturX application
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - laravel
+  - php
+  - facturation
+  - saas
+home: https://facturx.com
+sources:
+  - https://github.com/your-username/facturx
+maintainers:
+  - name: FacturX Team
+    email: dev@facturx.com
+dependencies:
+  - name: postgresql
+    version: "12.x.x"
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+  - name: redis
+    version: "17.x.x" 
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled
+annotations:
+  category: Business Applications
