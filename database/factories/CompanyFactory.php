@@ -34,9 +34,11 @@ class CompanyFactory extends Factory
             'plan_id' => Plan::factory(),
             'pdp_id' => null,
             'vat_regime' => $this->faker->randomElement(['franchise-en-base', 'reel-simplifie', 'reel-normal']),
-            'fiscal_year_start' => '01-01',
+            'fiscal_year_start' => now()->startOfYear(),
             'currency_code' => 'EUR',
             'language_code' => 'fr',
+            'is_active' => true,
+            'trial_ends_at' => now()->addDays(30),
         ];
     }
 
@@ -69,6 +71,26 @@ class CompanyFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'legal_form' => 'SARL',
             'vat_regime' => 'reel-simplifie',
+        ]);
+    }
+
+    /**
+     * Indicate that the company is inactive.
+     */
+    public function inactive(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_active' => false,
+        ]);
+    }
+
+    /**
+     * Indicate that the company trial has expired.
+     */
+    public function expiredTrial(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'trial_ends_at' => now()->subDays(1),
         ]);
     }
 }

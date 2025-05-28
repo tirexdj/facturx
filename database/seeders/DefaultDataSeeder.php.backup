@@ -1,0 +1,114 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Domain\Auth\Models\Role;
+use App\Domain\Company\Models\Plan;
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use Illuminate\Database\Seeder;
+
+class DefaultDataSeeder extends Seeder
+{
+    /**
+     * Run the database seeds.
+     */
+    public function run(): void
+    {
+        // Create default plans
+        $this->createPlans();
+        
+        // Create default roles
+        $this->createRoles();
+    }
+
+    /**
+     * Create default plans.
+     */
+    private function createPlans(): void
+    {
+        $plans = [
+            [
+                'name' => 'Plan Gratuit',
+                'code' => 'free',
+                'description' => 'Plan gratuit avec fonctionnalités limitées (50 clients, 50 factures/mois)',
+                'price_monthly' => 0.00,
+                'price_yearly' => 0.00,
+                'currency_code' => 'EUR',
+                'is_active' => true,
+                'is_public' => true,
+                'trial_days' => 30,
+            ],
+            [
+                'name' => 'Pack Starter',
+                'code' => 'starter',
+                'description' => 'Pack Starter (clients et produits illimités, 500 factures/mois)',
+                'price_monthly' => 9.90,
+                'price_yearly' => 99.00,
+                'currency_code' => 'EUR',
+                'is_active' => true,
+                'is_public' => true,
+                'trial_days' => 30,
+            ],
+            [
+                'name' => 'Pack Business',
+                'code' => 'business',
+                'description' => 'Pack Business (volume illimité, automatisations, multi-devise)',
+                'price_monthly' => 19.90,
+                'price_yearly' => 199.00,
+                'currency_code' => 'EUR',
+                'is_active' => true,
+                'is_public' => true,
+                'trial_days' => 30,
+            ],
+            [
+                'name' => 'Pack Premium',
+                'code' => 'premium',
+                'description' => 'Pack Premium (multi-entreprise, API, marque blanche)',
+                'price_monthly' => 39.90,
+                'price_yearly' => 399.00,
+                'currency_code' => 'EUR',
+                'is_active' => true,
+                'is_public' => true,
+                'trial_days' => 30,
+            ],
+        ];
+
+        foreach ($plans as $planData) {
+            Plan::firstOrCreate(
+                ['code' => $planData['code']],
+                $planData
+            );
+        }
+    }
+
+    /**
+     * Create default roles.
+     */
+    private function createRoles(): void
+    {
+        $roles = [
+            [
+                'name' => 'Administrateur',
+                'description' => 'Rôle administrateur avec tous les droits',
+                'is_system' => true,
+            ],
+            [
+                'name' => 'Utilisateur',
+                'description' => 'Rôle utilisateur standard avec droits limités',
+                'is_system' => true,
+            ],
+            [
+                'name' => 'Lecture seule',
+                'description' => 'Rôle en lecture seule, aucune modification possible',
+                'is_system' => true,
+            ],
+        ];
+
+        foreach ($roles as $roleData) {
+            Role::firstOrCreate(
+                ['name' => $roleData['name']],
+                $roleData
+            );
+        }
+    }
+}

@@ -52,4 +52,14 @@ class Role extends Model
             ->withTimestamps()
             ->withPivot('created_by');
     }
+
+     /**
+     * Create a new factory instance for the model.
+     *
+     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     */
+    protected static function newFactory()
+    {
+        return \Database\Factories\RoleFactory::new();
+    }
 }

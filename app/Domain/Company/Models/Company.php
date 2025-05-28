@@ -57,8 +57,21 @@ class Company extends Model implements HasMedia
         'fiscal_year_start',
         'currency_code',
         'language_code',
+        'is_active',
+        'trial_ends_at',
         'created_by',
         'updated_by',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'is_active' => 'boolean',
+        'trial_ends_at' => 'datetime',
+        'fiscal_year_start' => 'date',
     ];
 
     /**
