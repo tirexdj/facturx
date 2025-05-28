@@ -32,6 +32,7 @@ class Feature extends Model
     public function plans(): BelongsToMany
     {
         return $this->belongsToMany(Plan::class, 'plan_features')
+            ->using(PlanFeature::class)
             ->withPivot(['is_enabled', 'value_limit'])
             ->withTimestamps();
     }
@@ -50,5 +51,15 @@ class Feature extends Model
     public function featureUsage(): HasMany
     {
         return $this->hasMany(FeatureUsage::class);
+    }
+
+    /**
+     * Create a new factory instance for the model.
+     *
+     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     */
+    protected static function newFactory()
+    {
+        return \Database\Factories\Domain\Analytics\Models\FeatureFactory::new();
     }
 }

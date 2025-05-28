@@ -192,9 +192,9 @@ class CreateFacturxTable extends Migration
             $table->string('addressable_type');
             $table->uuid('addressable_id');
             $table->string('label')->nullable();
-            $table->string('address_line1');
-            $table->string('address_line2')->nullable();
-            $table->string('address_line3')->nullable();
+            $table->string('line_1');
+            $table->string('line_2')->nullable();
+            $table->string('line_3')->nullable();
             $table->string('postal_code', 20);
             $table->string('city');
             $table->string('state_province')->nullable();

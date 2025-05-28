@@ -44,11 +44,19 @@ Route::prefix('v1')->group(function () {
             Route::put('/password', [\App\Http\Controllers\Api\V1\Auth\AuthController::class, 'updatePassword']);
         });
 
-        // Company routes
+        // Company routes (user's own company)
         Route::prefix('company')->group(function () {
-            Route::get('/', [\App\Http\Controllers\Api\V1\Company\CompanyController::class, 'show']);
-            Route::put('/', [\App\Http\Controllers\Api\V1\Company\CompanyController::class, 'update']);
-            Route::delete('/', [\App\Http\Controllers\Api\V1\Company\CompanyController::class, 'destroy']);
+            Route::get('/', [\App\Http\Controllers\Api\V1\Company\CompanyController::class, 'showOwnCompany']);
+            Route::put('/', [\App\Http\Controllers\Api\V1\Company\CompanyController::class, 'updateOwnCompany']);
+        });
+
+        // Companies management routes (admin)
+        Route::prefix('companies')->middleware('api.plan.limits:manage_companies')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\V1\Company\CompanyController::class, 'index']);
+            Route::post('/', [\App\Http\Controllers\Api\V1\Company\CompanyController::class, 'store']);
+            Route::get('/{company}', [\App\Http\Controllers\Api\V1\Company\CompanyController::class, 'show']);
+            Route::put('/{company}', [\App\Http\Controllers\Api\V1\Company\CompanyController::class, 'update']);
+            Route::delete('/{company}', [\App\Http\Controllers\Api\V1\Company\CompanyController::class, 'destroy']);
         });
 
         // Plans routes (read-only)

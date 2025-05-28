@@ -5,12 +5,34 @@ namespace App\Domain\Analytics\Models;
 use App\Domain\Company\Models\Plan;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class PlanFeature extends Model
+class PlanFeature extends Pivot
 {
     use HasFactory, HasUuids;
+
+
+        /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'plan_features';
+
+    /**
+     * Indicates if the IDs are auto-incrementing.
+     *
+     * @var bool
+     */
+    public $incrementing = false;
+
+    /**
+     * The "type" of the auto-incrementing ID.
+     *
+     * @var string
+     */
+    protected $keyType = 'string';
 
     /**
      * The attributes that are mass assignable.

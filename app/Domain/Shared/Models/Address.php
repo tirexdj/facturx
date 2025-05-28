@@ -21,9 +21,9 @@ class Address extends Model
         'addressable_type',
         'addressable_id',
         'label',
-        'address_line1',
-        'address_line2',
-        'address_line3',
+        'line_1',
+        'line_2',
+        'line_3',
         'postal_code',
         'city',
         'state_province',
@@ -59,14 +59,14 @@ class Address extends Model
      */
     public function getFullAddressAttribute(): string
     {
-        $address = $this->address_line1;
+        $address = $this->line_1;
         
-        if (!empty($this->address_line2)) {
-            $address .= ', ' . $this->address_line2;
+        if (!empty($this->line_2)) {
+            $address .= ', ' . $this->line_2;
         }
         
-        if (!empty($this->address_line3)) {
-            $address .= ', ' . $this->address_line3;
+        if (!empty($this->line_3)) {
+            $address .= ', ' . $this->line_3;
         }
         
         $address .= ', ' . $this->postal_code . ' ' . $this->city;
@@ -89,9 +89,9 @@ class Address extends Model
     {
         $parts = [];
         
-        if (!empty($this->address_line1)) $parts[] = $this->address_line1;
-        if (!empty($this->address_line2)) $parts[] = $this->address_line2;
-        if (!empty($this->address_line3)) $parts[] = $this->address_line3;
+        if (!empty($this->line_1)) $parts[] = $this->line_1;
+        if (!empty($this->line_2)) $parts[] = $this->line_2;
+        if (!empty($this->line_3)) $parts[] = $this->line_3;
         if (!empty($this->postal_code) || !empty($this->city)) {
             $parts[] = trim($this->postal_code . ' ' . $this->city);
         }

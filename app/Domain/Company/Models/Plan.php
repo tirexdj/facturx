@@ -71,6 +71,7 @@ class Plan extends Model implements HasMedia
     public function features(): BelongsToMany
     {
         return $this->belongsToMany(Feature::class, 'plan_features')
+            ->using(PlanFeature::class)
             ->withPivot(['is_enabled', 'value_limit'])
             ->withTimestamps();
     }
