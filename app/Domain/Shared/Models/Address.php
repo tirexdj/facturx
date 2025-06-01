@@ -100,4 +100,14 @@ class Address extends Model
         
         return implode(', ', $parts);
     }
+
+    /**
+     * Create a new factory instance for the model.
+     *
+     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     */
+    protected static function newFactory()
+    {
+        return \Database\Factories\Domain\Shared\Models\AddressFactory::new();
+    }
 }

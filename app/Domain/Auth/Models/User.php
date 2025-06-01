@@ -131,6 +131,16 @@ class User extends Authenticatable implements HasMedia
     }
 
     /**
+     * Check if the user has a specific permission.
+     */
+    public function hasPermission(string $permission): bool
+    {
+        // TODO: Implement proper role/permission system
+        // For now, return true for all permissions
+        return true;
+    }
+
+    /**
      * Create a new factory instance for the model.
      *
      * @return \Illuminate\Database\Eloquent\Factories\Factory

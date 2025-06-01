@@ -24,13 +24,6 @@ class Permission extends Model
     ];
 
     /**
-     * The model doesn't use soft deletes.
-     *
-     * @var bool
-     */
-    protected $softDelete = false;
-
-    /**
      * Get the roles that have this permission.
      */
     public function roles(): BelongsToMany
@@ -41,7 +34,7 @@ class Permission extends Model
     }
 
     /**
-     * Get the users that have explicitly been given this permission.
+     * Get the users that have this permission directly.
      */
     public function users(): BelongsToMany
     {

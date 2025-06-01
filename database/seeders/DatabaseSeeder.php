@@ -11,6 +11,11 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Ne pas exécuter les seeders automatiquement dans l'environnement de test
+        if (app()->environment('testing')) {
+            return;
+        }
+        
         $this->call([
             FeatureSeeder::class,
             PlanSeeder::class,

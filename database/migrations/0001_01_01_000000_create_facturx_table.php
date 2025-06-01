@@ -563,24 +563,21 @@ class CreateFacturxTable extends Migration
         });
         
         // Payment Terms
-        Schema::create('payment_terms', function (Blueprint $table) {
+       Schema::create('payment_terms', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('company_id');
+            $table->foreignUuid('company_id')->constrained()->onDelete('cascade');
             $table->string('name');
-            $table->integer('days');
-            $table->text('description')->nullable();
+            $table->string('description')->nullable();
+            $table->integer('days')->default(30); // Nombre de jours
+            $table->enum('type', ['net', 'end_of_month', 'end_of_month_plus'])->default('net');
+            $table->decimal('discount_percentage', 5, 2)->nullable(); // Remise pour paiement anticipé
+            $table->integer('discount_days')->nullable(); // Jours pour bénéficier de la remise
             $table->boolean('is_default')->default(false);
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
             $table->softDeletes();
-            $table->uuid('created_by')->nullable();
-            $table->uuid('updated_by')->nullable();
-            $table->uuid('deleted_by')->nullable();
             
-            // Index
-            $table->index('company_id');
-            
-            // Foreign keys
-            $table->foreign('company_id')->references('id')->on('companies');
+            $table->index(['company_id', 'is_default']);
         });
         
         // Payment Methods

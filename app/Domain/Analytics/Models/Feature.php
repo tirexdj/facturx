@@ -2,7 +2,6 @@
 
 namespace App\Domain\Analytics\Models;
 
-use App\Domain\Company\Models\Company;
 use App\Domain\Company\Models\Plan;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -43,23 +42,5 @@ class Feature extends Model
     public function planFeatures(): HasMany
     {
         return $this->hasMany(PlanFeature::class);
-    }
-
-    /**
-     * Get the feature usage records for this feature.
-     */
-    public function featureUsage(): HasMany
-    {
-        return $this->hasMany(FeatureUsage::class);
-    }
-
-    /**
-     * Create a new factory instance for the model.
-     *
-     * @return \Illuminate\Database\Eloquent\Factories\Factory
-     */
-    protected static function newFactory()
-    {
-        return \Database\Factories\Domain\Analytics\Models\FeatureFactory::new();
     }
 }

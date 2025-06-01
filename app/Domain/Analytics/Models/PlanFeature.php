@@ -12,8 +12,7 @@ class PlanFeature extends Pivot
 {
     use HasFactory, HasUuids;
 
-
-        /**
+    /**
      * The table associated with the model.
      *
      * @var string
@@ -28,7 +27,7 @@ class PlanFeature extends Pivot
     public $incrementing = false;
 
     /**
-     * The "type" of the auto-incrementing ID.
+     * The data type of the auto-incrementing ID.
      *
      * @var string
      */
@@ -65,10 +64,26 @@ class PlanFeature extends Pivot
     }
 
     /**
-     * Get the feature that the plan feature belongs to.
+     * Get the feature that owns the plan feature.
      */
     public function feature(): BelongsTo
     {
         return $this->belongsTo(Feature::class);
+    }
+
+    /**
+     * Check if the feature is unlimited.
+     */
+    public function isUnlimited(): bool
+    {
+        return $this->value_limit === -1;
+    }
+
+    /**
+     * Get the usage limit for this feature.
+     */
+    public function getUsageLimit(): ?int
+    {
+        return $this->isUnlimited() ? null : $this->value_limit;
     }
 }

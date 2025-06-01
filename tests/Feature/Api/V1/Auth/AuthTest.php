@@ -6,26 +6,19 @@ use App\Domain\Auth\Models\User;
 use App\Domain\Company\Models\Company;
 use App\Domain\Company\Models\Plan;
 use App\Domain\Auth\Models\Role;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\Sanctum;
 use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
-use Tests\Traits\ApiTestTrait;
+use Tests\Feature\Api\V1\BaseApiTest;
 
-class AuthTest extends TestCase
+class AuthTest extends BaseApiTest
 {
-    use RefreshDatabase, ApiTestTrait;
-
     protected function setUp(): void
     {
         parent::setUp();
 
-        // Set up basic test data
-        $this->setUpApiTest();
-
         // Update test user password for login tests
-        $this->testUser->update([
+        $this->user->update([
             'password' => Hash::make('password123')
         ]);
     }
@@ -34,7 +27,7 @@ class AuthTest extends TestCase
     public function test_user_can_login_with_valid_credentials(): void
     {
         $response = $this->apiPost('/api/v1/auth/login', [
-            'email' => $this->testUser->email,
+            'email' => $this->user->email,
             'password' => 'password123',
             'device_name' => 'test-device',
         ]);
@@ -49,7 +42,7 @@ class AuthTest extends TestCase
         ]);
 
         $this->assertDatabaseHas('personal_access_tokens', [
-            'tokenable_id' => $this->testUser->id,
+            'tokenable_id' => $this->user->id,
             'name' => 'test-device',
         ]);
     }
@@ -58,7 +51,7 @@ class AuthTest extends TestCase
     public function test_user_cannot_login_with_invalid_password(): void
     {
         $response = $this->apiPost('/api/v1/auth/login', [
-            'email' => $this->testUser->email,
+            'email' => $this->user->email,
             'password' => 'wrong-password',
         ]);
 
@@ -131,7 +124,7 @@ class AuthTest extends TestCase
     public function test_login_requires_password(): void
     {
         $response = $this->apiPost('/api/v1/auth/login', [
-            'email' => $this->testUser->email,
+            'email' => $this->user->email,
         ]);
 
         $this->assertApiValidationError($response, ['password']);
@@ -140,7 +133,7 @@ class AuthTest extends TestCase
     #[Test]
     public function test_authenticated_user_can_logout(): void
     {
-        $this->actingAsUser($this->testUser);
+        $this->actingAsUser($this->user);
 
         $response = $this->apiPost('/api/v1/auth/logout');
 
@@ -151,7 +144,7 @@ class AuthTest extends TestCase
 
         // Token should be deleted
         $this->assertDatabaseMissing('personal_access_tokens', [
-            'tokenable_id' => $this->testUser->id,
+            'tokenable_id' => $this->user->id,
         ]);
     }
 
@@ -166,7 +159,7 @@ class AuthTest extends TestCase
     #[Test]
     public function test_authenticated_user_can_get_profile(): void
     {
-        $this->actingAsUser($this->testUser);
+        $this->actingAsUser($this->user);
 
         $response = $this->apiGet('/api/v1/auth/me');
 
@@ -184,8 +177,8 @@ class AuthTest extends TestCase
         ])
         ->assertJson([
             'data' => [
-                'id' => $this->testUser->id,
-                'email' => $this->testUser->email,
+                'id' => $this->user->id,
+                'email' => $this->user->email,
             ],
         ]);
     }
@@ -214,7 +207,7 @@ class AuthTest extends TestCase
             'device_name' => 'test-device',
         ];
 
-        $response = $this->postJson('/api/v1/auth/register', $userData);
+        $response = $this->apiPost('/api/v1/auth/register', $userData);
 
         $response->assertStatus(201)
             ->assertJsonStructure([
@@ -259,7 +252,7 @@ class AuthTest extends TestCase
     #[Test]
     public function test_registration_requires_all_mandatory_fields(): void
     {
-        $response = $this->postJson('/api/v1/auth/register', []);
+        $response = $this->apiPost('/api/v1/auth/register', []);
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors([
@@ -277,13 +270,13 @@ class AuthTest extends TestCase
         $userData = [
             'first_name' => 'John',
             'last_name' => 'Doe',
-            'email' => $this->testUser->email, // Using existing user's email
+            'email' => $this->user->email, // Using existing user's email
             'password' => 'password123',
             'password_confirmation' => 'password123',
             'company_name' => 'Test Company',
         ];
 
-        $response = $this->postJson('/api/v1/auth/register', $userData);
+        $response = $this->apiPost('/api/v1/auth/register', $userData);
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['email']);
@@ -302,7 +295,7 @@ class AuthTest extends TestCase
             'siren' => '12345', // Invalid SIREN (must be 9 digits)
         ];
 
-        $response = $this->postJson('/api/v1/auth/register', $userData);
+        $response = $this->apiPost('/api/v1/auth/register', $userData);
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['siren']);
@@ -321,7 +314,7 @@ class AuthTest extends TestCase
             'siret' => '12345', // Invalid SIRET (must be 14 digits)
         ];
 
-        $response = $this->postJson('/api/v1/auth/register', $userData);
+        $response = $this->apiPost('/api/v1/auth/register', $userData);
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['siret']);
@@ -341,7 +334,7 @@ class AuthTest extends TestCase
             'siret' => '98765432101234', // SIRET doesn't start with SIREN
         ];
 
-        $response = $this->postJson('/api/v1/auth/register', $userData);
+        $response = $this->apiPost('/api/v1/auth/register', $userData);
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['siret']);
@@ -350,7 +343,7 @@ class AuthTest extends TestCase
     #[Test]
     public function test_user_can_update_profile(): void
     {
-        Sanctum::actingAs($this->testUser);
+        $this->actingAsUser($this->user);
 
         $updateData = [
             'first_name' => 'Updated First Name',
@@ -360,7 +353,7 @@ class AuthTest extends TestCase
             'timezone' => 'America/New_York',
         ];
 
-        $response = $this->putJson('/api/v1/auth/profile', $updateData);
+        $response = $this->apiPut('/api/v1/auth/profile', $updateData);
 
         $response->assertStatus(200)
             ->assertJson([
@@ -376,7 +369,7 @@ class AuthTest extends TestCase
             ]);
 
         $this->assertDatabaseHas('users', [
-            'id' => $this->testUser->id,
+            'id' => $this->user->id,
             'first_name' => 'Updated First Name',
             'last_name' => 'Updated Last Name',
             'job_title' => 'Updated Job Title',
@@ -386,7 +379,7 @@ class AuthTest extends TestCase
     #[Test]
     public function test_user_can_update_password(): void
     {
-        Sanctum::actingAs($this->testUser);
+        $this->actingAsUser($this->user);
 
         $updateData = [
             'current_password' => 'password123',
@@ -394,7 +387,7 @@ class AuthTest extends TestCase
             'new_password_confirmation' => 'newpassword456',
         ];
 
-        $response = $this->putJson('/api/v1/auth/password', $updateData);
+        $response = $this->apiPut('/api/v1/auth/password', $updateData);
 
         $response->assertStatus(200)
             ->assertJson([
@@ -403,8 +396,8 @@ class AuthTest extends TestCase
             ]);
 
         // Verify password was updated by trying to login with new password
-        $loginResponse = $this->postJson('/api/v1/auth/login', [
-            'email' => $this->testUser->email,
+        $loginResponse = $this->apiPost('/api/v1/auth/login', [
+            'email' => $this->user->email,
             'password' => 'newpassword456',
         ]);
 
@@ -414,7 +407,7 @@ class AuthTest extends TestCase
     #[Test]
     public function test_user_cannot_update_password_with_wrong_current_password(): void
     {
-        Sanctum::actingAs($this->testUser);
+        $this->actingAsUser($this->user);
 
         $updateData = [
             'current_password' => 'wrongpassword',
@@ -422,7 +415,7 @@ class AuthTest extends TestCase
             'new_password_confirmation' => 'newpassword456',
         ];
 
-        $response = $this->putJson('/api/v1/auth/password', $updateData);
+        $response = $this->apiPut('/api/v1/auth/password', $updateData);
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['current_password']);
@@ -431,8 +424,8 @@ class AuthTest extends TestCase
     #[Test]
     public function test_user_can_request_password_reset(): void
     {
-        $response = $this->postJson('/api/v1/auth/forgot-password', [
-            'email' => $this->testUser->email,
+        $response = $this->apiPost('/api/v1/auth/forgot-password', [
+            'email' => $this->user->email,
         ]);
 
         $response->assertStatus(200)
@@ -444,7 +437,7 @@ class AuthTest extends TestCase
     #[Test]
     public function test_password_reset_request_validates_email_exists(): void
     {
-        $response = $this->postJson('/api/v1/auth/forgot-password', [
+        $response = $this->apiPost('/api/v1/auth/forgot-password', [
             'email' => 'nonexistent@example.com',
         ]);
 
@@ -455,7 +448,7 @@ class AuthTest extends TestCase
     #[Test]
     public function test_password_reset_validates_required_fields(): void
     {
-        $response = $this->postJson('/api/v1/auth/reset-password', []);
+        $response = $this->apiPost('/api/v1/auth/reset-password', []);
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['token', 'email', 'password']);

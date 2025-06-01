@@ -69,58 +69,61 @@ Route::prefix('v1')->group(function () {
         Route::prefix('clients')->group(function () {
             Route::get('/', [\App\Http\Controllers\Api\V1\Customer\ClientController::class, 'index']);
             Route::post('/', [\App\Http\Controllers\Api\V1\Customer\ClientController::class, 'store']);
+            Route::get('/statistics', [\App\Http\Controllers\Api\V1\Customer\ClientController::class, 'statistics']);
+            Route::post('/import', [\App\Http\Controllers\Api\V1\Customer\ClientController::class, 'import']);
+            Route::post('/validate-siren', [\App\Http\Controllers\Api\V1\Customer\ClientController::class, 'validateSiren']);
             Route::get('/{client}', [\App\Http\Controllers\Api\V1\Customer\ClientController::class, 'show']);
             Route::put('/{client}', [\App\Http\Controllers\Api\V1\Customer\ClientController::class, 'update']);
             Route::delete('/{client}', [\App\Http\Controllers\Api\V1\Customer\ClientController::class, 'destroy']);
         });
 
         // Products routes
-        Route::prefix('products')->group(function () {
-            Route::get('/', [\App\Http\Controllers\Api\V1\Product\ProductController::class, 'index']);
-            Route::post('/', [\App\Http\Controllers\Api\V1\Product\ProductController::class, 'store']);
-            Route::get('/{product}', [\App\Http\Controllers\Api\V1\Product\ProductController::class, 'show']);
-            Route::put('/{product}', [\App\Http\Controllers\Api\V1\Product\ProductController::class, 'update']);
-            Route::delete('/{product}', [\App\Http\Controllers\Api\V1\Product\ProductController::class, 'destroy']);
-        });
+        // Route::prefix('products')->group(function () {
+        //     Route::get('/', [\App\Http\Controllers\Api\V1\Product\ProductController::class, 'index']);
+        //     Route::post('/', [\App\Http\Controllers\Api\V1\Product\ProductController::class, 'store']);
+        //     Route::get('/{product}', [\App\Http\Controllers\Api\V1\Product\ProductController::class, 'show']);
+        //     Route::put('/{product}', [\App\Http\Controllers\Api\V1\Product\ProductController::class, 'update']);
+        //     Route::delete('/{product}', [\App\Http\Controllers\Api\V1\Product\ProductController::class, 'destroy']);
+        // });
 
         // Services routes
-        Route::prefix('services')->group(function () {
-            Route::get('/', [\App\Http\Controllers\Api\V1\Product\ServiceController::class, 'index']);
-            Route::post('/', [\App\Http\Controllers\Api\V1\Product\ServiceController::class, 'store']);
-            Route::get('/{service}', [\App\Http\Controllers\Api\V1\Product\ServiceController::class, 'show']);
-            Route::put('/{service}', [\App\Http\Controllers\Api\V1\Product\ServiceController::class, 'update']);
-            Route::delete('/{service}', [\App\Http\Controllers\Api\V1\Product\ServiceController::class, 'destroy']);
-        });
+        // Route::prefix('services')->group(function () {
+        //     Route::get('/', [\App\Http\Controllers\Api\V1\Product\ServiceController::class, 'index']);
+        //     Route::post('/', [\App\Http\Controllers\Api\V1\Product\ServiceController::class, 'store']);
+        //     Route::get('/{service}', [\App\Http\Controllers\Api\V1\Product\ServiceController::class, 'show']);
+        //     Route::put('/{service}', [\App\Http\Controllers\Api\V1\Product\ServiceController::class, 'update']);
+        //     Route::delete('/{service}', [\App\Http\Controllers\Api\V1\Product\ServiceController::class, 'destroy']);
+        // });
 
-        // Quotes routes
-        Route::prefix('quotes')->group(function () {
-            Route::get('/', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'index']);
-            Route::post('/', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'store']);
-            Route::get('/{quote}', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'show']);
-            Route::put('/{quote}', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'update']);
-            Route::delete('/{quote}', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'destroy']);
-            Route::post('/{quote}/send', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'send']);
-            Route::post('/{quote}/convert-to-invoice', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'convertToInvoice']);
-        });
+        // // Quotes routes
+        // Route::prefix('quotes')->group(function () {
+        //     Route::get('/', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'index']);
+        //     Route::post('/', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'store']);
+        //     Route::get('/{quote}', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'show']);
+        //     Route::put('/{quote}', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'update']);
+        //     Route::delete('/{quote}', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'destroy']);
+        //     Route::post('/{quote}/send', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'send']);
+        //     Route::post('/{quote}/convert-to-invoice', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'convertToInvoice']);
+        // });
 
-        // Invoices routes
-        Route::prefix('invoices')->group(function () {
-            Route::get('/', [\App\Http\Controllers\Api\V1\Invoice\InvoiceController::class, 'index']);
-            Route::post('/', [\App\Http\Controllers\Api\V1\Invoice\InvoiceController::class, 'store']);
-            Route::get('/{invoice}', [\App\Http\Controllers\Api\V1\Invoice\InvoiceController::class, 'show']);
-            Route::put('/{invoice}', [\App\Http\Controllers\Api\V1\Invoice\InvoiceController::class, 'update']);
-            Route::delete('/{invoice}', [\App\Http\Controllers\Api\V1\Invoice\InvoiceController::class, 'destroy']);
-            Route::post('/{invoice}/send', [\App\Http\Controllers\Api\V1\Invoice\InvoiceController::class, 'send']);
-            Route::get('/{invoice}/pdf', [\App\Http\Controllers\Api\V1\Invoice\InvoiceController::class, 'downloadPdf']);
-        });
+        // // Invoices routes
+        // Route::prefix('invoices')->group(function () {
+        //     Route::get('/', [\App\Http\Controllers\Api\V1\Invoice\InvoiceController::class, 'index']);
+        //     Route::post('/', [\App\Http\Controllers\Api\V1\Invoice\InvoiceController::class, 'store']);
+        //     Route::get('/{invoice}', [\App\Http\Controllers\Api\V1\Invoice\InvoiceController::class, 'show']);
+        //     Route::put('/{invoice}', [\App\Http\Controllers\Api\V1\Invoice\InvoiceController::class, 'update']);
+        //     Route::delete('/{invoice}', [\App\Http\Controllers\Api\V1\Invoice\InvoiceController::class, 'destroy']);
+        //     Route::post('/{invoice}/send', [\App\Http\Controllers\Api\V1\Invoice\InvoiceController::class, 'send']);
+        //     Route::get('/{invoice}/pdf', [\App\Http\Controllers\Api\V1\Invoice\InvoiceController::class, 'downloadPdf']);
+        // });
 
-        // Payments routes
-        Route::prefix('payments')->group(function () {
-            Route::get('/', [\App\Http\Controllers\Api\V1\Payment\PaymentController::class, 'index']);
-            Route::post('/', [\App\Http\Controllers\Api\V1\Payment\PaymentController::class, 'store']);
-            Route::get('/{payment}', [\App\Http\Controllers\Api\V1\Payment\PaymentController::class, 'show']);
-            Route::put('/{payment}', [\App\Http\Controllers\Api\V1\Payment\PaymentController::class, 'update']);
-            Route::delete('/{payment}', [\App\Http\Controllers\Api\V1\Payment\PaymentController::class, 'destroy']);
-        });
+        // // Payments routes
+        // Route::prefix('payments')->group(function () {
+        //     Route::get('/', [\App\Http\Controllers\Api\V1\Payment\PaymentController::class, 'index']);
+        //     Route::post('/', [\App\Http\Controllers\Api\V1\Payment\PaymentController::class, 'store']);
+        //     Route::get('/{payment}', [\App\Http\Controllers\Api\V1\Payment\PaymentController::class, 'show']);
+        //     Route::put('/{payment}', [\App\Http\Controllers\Api\V1\Payment\PaymentController::class, 'update']);
+        //     Route::delete('/{payment}', [\App\Http\Controllers\Api\V1\Payment\PaymentController::class, 'destroy']);
+        // });
     });
 });

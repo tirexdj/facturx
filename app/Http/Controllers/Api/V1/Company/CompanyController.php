@@ -25,40 +25,23 @@ class CompanyController extends BaseApiController
      */
     public function index(Request $request): JsonResponse
     {
-        $companies = Company::query()
-            ->with(['plan', 'addresses', 'phoneNumbers', 'emails'])
-            ->when($request->get('search'), function ($query, $search) {
-                $query->where(function ($q) use ($search) {
-                    // Utilise une approche compatible avec SQLite et PostgreSQL
-                    $operator = $this->getCaseInsensitiveLikeOperator();
-                    $searchTerm = $this->formatSearchTerm($search);
-                    
-                    if ($operator === 'LIKE') {
-                        // Pour SQLite, utilise LIKE avec LOWER()
-                        $q->whereRaw('LOWER(name) LIKE LOWER(?)', [$searchTerm])
-                          ->orWhereRaw('LOWER(legal_name) LIKE LOWER(?)', [$searchTerm])
-                          ->orWhereRaw('LOWER(siren) LIKE LOWER(?)', [$searchTerm])
-                          ->orWhereRaw('LOWER(siret) LIKE LOWER(?)', [$searchTerm]);
-                    } else {
-                        // Pour PostgreSQL et autres bases supportant ILIKE
-                        $q->where('name', $operator, $searchTerm)
-                          ->orWhere('legal_name', $operator, $searchTerm)
-                          ->orWhere('siren', $operator, $searchTerm)
-                          ->orWhere('siret', $operator, $searchTerm);
-                    }
-                });
-            })
-            ->when($request->get('plan_id'), function ($query, $planId) {
-                $query->where('plan_id', $planId);
-            })
-            ->when($request->get('is_active'), function ($query, $isActive) {
-                $query->where('is_active', filter_var($isActive, FILTER_VALIDATE_BOOLEAN));
-            })
-            ->orderBy(
-                $request->get('sort', 'created_at'),
-                $request->get('direction', 'desc')
-            )
-            ->paginate($request->get('per_page', 15));
+        $query = Company::query()->with(['plan', 'addresses', 'phoneNumbers', 'emails']);
+        
+        // Configuration pour la construction de la requête
+        $config = [
+            'searchFields' => ['name', 'legal_name', 'siren', 'siret'],
+            'exactFilters' => ['plan_id'],
+            'booleanFilters' => ['is_active'],
+            'allowedSorts' => ['name', 'legal_name', 'siren', 'siret', 'created_at', 'updated_at'],
+            'defaultSort' => 'created_at',
+            'defaultDirection' => 'desc'
+        ];
+        
+        // Construire la requête avec les filtres, recherche et tri
+        $this->buildQuery($query, $request, $config);
+        
+        // Paginer les résultats
+        $companies = $query->paginate($request->get('per_page', 15));
 
         return $this->successResponse(
             new CompanyCollection($companies),
@@ -66,26 +49,6 @@ class CompanyController extends BaseApiController
         );
     }
 
-    /**
-     * Get the appropriate case-insensitive LIKE operator for the current database.
-     * 
-     * @return string
-     */
-    private function getCaseInsensitiveLikeOperator(): string
-    {
-        return config('database.default') === 'sqlite' ? 'LIKE' : 'ILIKE';
-    }
-
-    /**
-     * Format search term for the current database.
-     * 
-     * @param string $search
-     * @return string
-     */
-    private function formatSearchTerm(string $search): string
-    {
-        return "%{$search}%";
-    }
 
     /**
      * Store a newly created company.

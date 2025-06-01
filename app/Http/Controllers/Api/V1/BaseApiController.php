@@ -195,12 +195,235 @@ abstract class BaseApiController extends Controller
     {
         if ($search && !empty($searchFields)) {
             $query->where(function ($q) use ($search, $searchFields) {
-                foreach ($searchFields as $field) {
-                    $q->orWhere($field, 'like', "%{$search}%");
+                $operator = $this->getCaseInsensitiveLikeOperator();
+                $searchTerm = $this->formatSearchTerm($search);
+                
+                foreach ($searchFields as $index => $field) {
+                    if ($operator === 'LIKE') {
+                        // Pour SQLite, utilise LIKE avec LOWER()
+                        if ($index === 0) {
+                            $q->whereRaw('LOWER(' . $field . ') LIKE LOWER(?)', [$searchTerm]);
+                        } else {
+                            $q->orWhereRaw('LOWER(' . $field . ') LIKE LOWER(?)', [$searchTerm]);
+                        }
+                    } else {
+                        // Pour PostgreSQL et autres bases supportant ILIKE
+                        if ($index === 0) {
+                            $q->where($field, $operator, $searchTerm);
+                        } else {
+                            $q->orWhere($field, $operator, $searchTerm);
+                        }
+                    }
                 }
             });
         }
 
         return $query;
+    }
+
+    /**
+     * Get the appropriate case-insensitive LIKE operator for the current database.
+     * 
+     * @return string
+     */
+    protected function getCaseInsensitiveLikeOperator(): string
+    {
+        return config('database.default') === 'sqlite' ? 'LIKE' : 'ILIKE';
+    }
+
+    /**
+     * Format search term for database queries.
+     * 
+     * @param string $search
+     * @return string
+     */
+    protected function formatSearchTerm(string $search): string
+    {
+        return "%{$search}%";
+    }
+
+    /**
+     * Apply case-insensitive search to query with database compatibility.
+     * 
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param string|null $search
+     * @param array $searchFields
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    protected function applyCaseInsensitiveSearch($query, string $search = null, array $searchFields = [])
+    {
+        if ($search && !empty($searchFields)) {
+            $query->where(function ($q) use ($search, $searchFields) {
+                $operator = $this->getCaseInsensitiveLikeOperator();
+                $searchTerm = $this->formatSearchTerm($search);
+                
+                foreach ($searchFields as $index => $field) {
+                    if ($operator === 'LIKE') {
+                        // Pour SQLite, utilise LIKE avec LOWER()
+                        if ($index === 0) {
+                            $q->whereRaw('LOWER(' . $field . ') LIKE LOWER(?)', [$searchTerm]);
+                        } else {
+                            $q->orWhereRaw('LOWER(' . $field . ') LIKE LOWER(?)', [$searchTerm]);
+                        }
+                    } else {
+                        // Pour PostgreSQL et autres bases supportant ILIKE
+                        if ($index === 0) {
+                            $q->where($field, $operator, $searchTerm);
+                        } else {
+                            $q->orWhere($field, $operator, $searchTerm);
+                        }
+                    }
+                }
+            });
+        }
+
+        return $query;
+    }
+
+    /**
+     * Apply exact search to query for specific field.
+     * 
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param string $field
+     * @param mixed $value
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    protected function applyExactSearch($query, string $field, $value)
+    {
+        if ($value !== null && $value !== '') {
+            $query->where($field, $value);
+        }
+
+        return $query;
+    }
+
+    /**
+     * Apply boolean search to query.
+     * 
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param string $field
+     * @param mixed $value
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    protected function applyBooleanSearch($query, string $field, $value)
+    {
+        if ($value !== null && $value !== '') {
+            $query->where($field, filter_var($value, FILTER_VALIDATE_BOOLEAN));
+        }
+
+        return $query;
+    }
+
+    /**
+     * Apply sorting to query with validation.
+     * 
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param \Illuminate\Http\Request $request
+     * @param array $allowedSorts
+     * @param string $defaultSort
+     * @param string $defaultDirection
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    protected function applySorting($query, Request $request, array $allowedSorts = [], string $defaultSort = 'created_at', string $defaultDirection = 'desc')
+    {
+        $sort = $request->get('sort', $defaultSort);
+        $direction = $request->get('direction', $defaultDirection);
+        
+        // Valider la direction
+        if (!in_array(strtolower($direction), ['asc', 'desc'])) {
+            $direction = $defaultDirection;
+        }
+        
+        // Valider le champ de tri si une liste est fournie
+        if (!empty($allowedSorts) && !in_array($sort, $allowedSorts)) {
+            $sort = $defaultSort;
+        }
+        
+        return $query->orderBy($sort, $direction);
+    }
+
+    /**
+     * Build query with common filtering, searching and sorting.
+     * 
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param \Illuminate\Http\Request $request
+     * @param array $config Configuration array with keys: searchFields, exactFilters, booleanFilters, allowedSorts, defaultSort, defaultDirection
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    protected function buildQuery($query, Request $request, array $config = [])
+    {
+        // Configuration par défaut
+        $config = array_merge([
+            'searchFields' => [],
+            'exactFilters' => [],
+            'booleanFilters' => [],
+            'allowedSorts' => [],
+            'defaultSort' => 'created_at',
+            'defaultDirection' => 'desc'
+        ], $config);
+        
+        // Appliquer la recherche textuelle
+        if (!empty($config['searchFields'])) {
+            $this->applyCaseInsensitiveSearch(
+                $query, 
+                $request->get('search'), 
+                $config['searchFields']
+            );
+        }
+        
+        // Appliquer les filtres exacts
+        foreach ($config['exactFilters'] as $filter) {
+            $this->applyExactSearch($query, $filter, $request->get($filter));
+        }
+        
+        // Appliquer les filtres booléens
+        foreach ($config['booleanFilters'] as $filter) {
+            $this->applyBooleanSearch($query, $filter, $request->get($filter));
+        }
+        
+        // Appliquer le tri
+        $this->applySorting(
+            $query, 
+            $request, 
+            $config['allowedSorts'], 
+            $config['defaultSort'], 
+            $config['defaultDirection']
+        );
+        
+        return $query;
+    }
+
+    /**
+     * Apply date range filter to query.
+     * 
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param string $field
+     * @param string|null $startDate
+     * @param string|null $endDate
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    protected function applyDateRangeFilter($query, string $field, string $startDate = null, string $endDate = null)
+    {
+        if ($startDate) {
+            $query->where($field, '>=', $startDate);
+        }
+        
+        if ($endDate) {
+            $query->where($field, '<=', $endDate);
+        }
+        
+        return $query;
+    }
+
+    /**
+     * Apply scope filter to current user's company.
+     * 
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param string $companyField
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    protected function applyCompanyScope($query, string $companyField = 'company_id')
+    {
+        return $query->where($companyField, $this->getUserCompanyId());
     }
 }

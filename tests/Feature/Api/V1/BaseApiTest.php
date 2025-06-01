@@ -7,19 +7,32 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Domain\Company\Models\Company;
 use App\Domain\Company\Models\Plan;
 use App\Domain\Auth\Models\User;
-use Laravel\Sanctum\Sanctum;
+use App\Domain\Auth\Models\Role;
+use Tests\Traits\ApiTestHelpers;
+use Tests\Traits\ManagesTestTransactions;
+use Tests\Traits\TestDatabaseMigrations;
 
 abstract class BaseApiTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, ApiTestHelpers, ManagesTestTransactions, TestDatabaseMigrations;
 
     protected User $user;
     protected Company $company;
     protected Plan $plan;
+    protected Role $role;
 
     protected function setUp(): void
     {
         parent::setUp();
+        
+        // Nettoyer les transactions avant de commencer
+        $this->setUpManagesTestTransactions();
+        
+        // Configuration de la base de données de test
+        $this->setupTestDatabase();
+        
+        // Vérifier la santé de la base de données
+        $this->verifyDatabaseHealth();
 
         // Create a plan
         $this->plan = Plan::factory()->create([
@@ -29,6 +42,9 @@ abstract class BaseApiTest extends TestCase
             'is_active' => true,
         ]);
 
+        // Create a role
+        $this->role = Role::factory()->admin()->create();
+
         // Create a company
         $this->company = Company::factory()->create([
             'plan_id' => $this->plan->id,
@@ -37,30 +53,31 @@ abstract class BaseApiTest extends TestCase
         // Create a user
         $this->user = User::factory()->create([
             'company_id' => $this->company->id,
+            'role_id' => $this->role->id,
+            'is_active' => true,
         ]);
     }
+    
 
-    /**
-     * Authenticate the test user.
-     */
-    protected function actingAsUser(?User $user = null): self
+    
+    protected function tearDown(): void
     {
-        $user = $user ?? $this->user;
-        
-        Sanctum::actingAs($user, ['*']);
-        
-        return $this;
+        $this->tearDownManagesTestTransactions();
+        parent::tearDown();
     }
 
     /**
      * Create an additional user for the same company.
      */
-    protected function createUserForCompany(?Company $company = null): User
+    protected function createUserForCompany(?Company $company = null, ?Role $role = null): User
     {
         $company = $company ?? $this->company;
+        $role = $role ?? $this->role;
         
         return User::factory()->create([
             'company_id' => $company->id,
+            'role_id' => $role->id,
+            'is_active' => true,
         ]);
     }
 
@@ -70,160 +87,13 @@ abstract class BaseApiTest extends TestCase
     protected function createUserForDifferentCompany(): User
     {
         $plan = Plan::factory()->create();
+        $role = Role::factory()->create();
         $company = Company::factory()->create(['plan_id' => $plan->id]);
         
         return User::factory()->create([
             'company_id' => $company->id,
+            'role_id' => $role->id,
+            'is_active' => true,
         ]);
-    }
-
-    /**
-     * Get API headers.
-     */
-    protected function getApiHeaders(array $additional = []): array
-    {
-        return array_merge([
-            'Accept' => 'application/json',
-            'Content-Type' => 'application/json',
-        ], $additional);
-    }
-
-    /**
-     * Make an API GET request with proper headers.
-     */
-    protected function apiGet(string $uri, array $headers = []): \Illuminate\Testing\TestResponse
-    {
-        return $this->getJson($uri, $this->getApiHeaders($headers));
-    }
-
-    /**
-     * Make an API POST request with proper headers.
-     */
-    protected function apiPost(string $uri, array $data = [], array $headers = []): \Illuminate\Testing\TestResponse
-    {
-        return $this->postJson($uri, $data, $this->getApiHeaders($headers));
-    }
-
-    /**
-     * Make an API PUT request with proper headers.
-     */
-    protected function apiPut(string $uri, array $data = [], array $headers = []): \Illuminate\Testing\TestResponse
-    {
-        return $this->putJson($uri, $data, $this->getApiHeaders($headers));
-    }
-
-    /**
-     * Make an API PATCH request with proper headers.
-     */
-    protected function apiPatch(string $uri, array $data = [], array $headers = []): \Illuminate\Testing\TestResponse
-    {
-        return $this->patchJson($uri, $data, $this->getApiHeaders($headers));
-    }
-
-    /**
-     * Make an API DELETE request with proper headers.
-     */
-    protected function apiDelete(string $uri, array $data = [], array $headers = []): \Illuminate\Testing\TestResponse
-    {
-        return $this->deleteJson($uri, $data, $this->getApiHeaders($headers));
-    }
-
-    /**
-     * Assert the response has the standard API success structure.
-     */
-    protected function assertApiSuccess(\Illuminate\Testing\TestResponse $response, int $status = 200): void
-    {
-        $response->assertStatus($status)
-            ->assertJsonStructure([
-                'success',
-                'message',
-                'data',
-            ])
-            ->assertJson([
-                'success' => true,
-            ]);
-    }
-
-    /**
-     * Assert the response has the standard API error structure.
-     */
-    protected function assertApiError(\Illuminate\Testing\TestResponse $response, int $status = 400): void
-    {
-        $response->assertStatus($status)
-            ->assertJsonStructure([
-                'success',
-                'message',
-            ])
-            ->assertJson([
-                'success' => false,
-            ]);
-    }
-
-    /**
-     * Assert the response has pagination structure.
-     */
-    protected function assertApiPagination(\Illuminate\Testing\TestResponse $response): void
-    {
-        $response->assertJsonStructure([
-            'success',
-            'message',
-            'data',
-            'meta' => [
-                'current_page',
-                'last_page',
-                'per_page',
-                'total',
-                'from',
-                'to',
-            ],
-            'links' => [
-                'first',
-                'last',
-                'prev',
-                'next',
-            ],
-        ]);
-    }
-
-    /**
-     * Assert the response requires authentication.
-     */
-    protected function assertRequiresAuthentication(\Illuminate\Testing\TestResponse $response): void
-    {
-        $response->assertStatus(401)
-            ->assertJson([
-                'message' => 'Unauthenticated.',
-                'error' => 'authentication_required',
-            ]);
-    }
-
-    /**
-     * Assert the response is forbidden (company access).
-     */
-    protected function assertForbiddenCompanyAccess(\Illuminate\Testing\TestResponse $response): void
-    {
-        $response->assertStatus(403);
-    }
-
-    /**
-     * Assert validation errors.
-     */
-    protected function assertValidationErrors(\Illuminate\Testing\TestResponse $response, array $fields = []): void
-    {
-        $response->assertStatus(422)
-            ->assertJsonStructure([
-                'message',
-                'error',
-                'errors',
-            ])
-            ->assertJson([
-                'error' => 'validation_failed',
-            ]);
-
-        if (!empty($fields)) {
-            foreach ($fields as $field) {
-                $response->assertJsonValidationErrors($field);
-            }
-        }
     }
 }
