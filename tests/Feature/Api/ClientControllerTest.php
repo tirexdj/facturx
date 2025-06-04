@@ -301,9 +301,9 @@ class ClientControllerTest extends TestCase
             'file' => $file,
             'skip_header' => true,
             'mapping' => [
-                'name' => 0,
-                'email' => 1,
-                'phone' => 2,
+                'name' => '0',
+                'email' => '1',
+                'phone' => '2',
             ]
         ]);
 
@@ -312,9 +312,11 @@ class ClientControllerTest extends TestCase
                 'success',
                 'message',
                 'data' => [
-                    'imported',
-                    'skipped',
-                    'errors',
+                  "total",
+                  "imported",
+                  "updated",
+                  "errors",
+                  "duplicates"
                 ]
             ]);
     }

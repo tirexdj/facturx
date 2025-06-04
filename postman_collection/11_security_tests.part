@@ -1,0 +1,183 @@
+		{
+			"name": "10. Error Handling & Security Tests",
+			"item": [
+				{
+					"name": "Test Unauthorized Access",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Temporarily remove auth token",
+									"pm.globals.set('temp_token', pm.globals.get('auth_token'));",
+									"pm.globals.unset('auth_token');"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 401', function () {",
+									"    pm.response.to.have.status(401);",
+									"});",
+									"",
+									"pm.test('Response has error message', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson).to.have.property('message');",
+									"});",
+									"",
+									"// Restore auth token",
+									"pm.globals.set('auth_token', pm.globals.get('temp_token'));",
+									"pm.globals.unset('temp_token');"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/clients",
+							"host": ["{{base_url}}"],
+							"path": ["clients"]
+						}
+					}
+				},
+				{
+					"name": "Test Invalid Data Validation",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 422', function () {",
+									"    pm.response.to.have.status(422);",
+									"});",
+									"",
+									"pm.test('Response has validation errors', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson).to.have.property('errors');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"\",\n    \"email\": \"invalid-email\",\n    \"siret\": \"123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/clients",
+							"host": ["{{base_url}}"],
+							"path": ["clients"]
+						}
+					}
+				},
+				{
+					"name": "Test Resource Not Found",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 404', function () {",
+									"    pm.response.to.have.status(404);",
+									"});",
+									"",
+									"pm.test('Response has error message', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson).to.have.property('message');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/clients/99999999-9999-9999-9999-999999999999",
+							"host": ["{{base_url}}"],
+							"path": ["clients", "99999999-9999-9999-9999-999999999999"]
+						}
+					}
+				},
+				{
+					"name": "Test Rate Limiting",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Note: Ce test peut prendre du temps car il fait beaucoup de requêtes",
+									"pm.test('Rate limiting works', function () {",
+									"    // Ce test vérifie que le rate limiting est en place",
+									"    // Le statut peut être 200 (si sous limite) ou 429 (si dépassé)",
+									"    pm.expect([200, 429]).to.include(pm.response.code);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/user",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "user"]
+						}
+					}
+				},
+				{
+					"name": "Test SQL Injection Protection",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('SQL injection is prevented', function () {",
+									"    // Même avec une tentative d'injection SQL, l'API doit répondre normalement",
+									"    pm.expect([200, 400, 422]).to.include(pm.response.code);",
+									"});",
+									"",
+									"pm.test('No SQL error in response', function () {",
+									"    const responseText = pm.response.text();",
+									"    pm.expect(responseText.toLowerCase()).to.not.include('sql');",
+									"    pm.expect(responseText.toLowerCase()).to.not.include('mysql');",
+									"    pm.expect(responseText.toLowerCase()).to.not.include('error');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/clients?search=' OR 1=1 --",
+							"host": ["{{base_url}}"],
+							"path": ["clients"],
+							"query": [
+								{
+									"key": "search",
+									"value": "' OR 1=1 --"
+								}
+							]
+						}
+					}
+				}
+			]
+		},

@@ -1,0 +1,92 @@
+{
+	"info": {
+		"name": "FacturX API Tests",
+		"description": "Collection complète de tests pour l'API FacturX - Solution SaaS de gestion commerciale et facturation électronique",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"version": "1.0.0"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{auth_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Configuration globale des variables",
+					"pm.globals.set('base_url', 'http://localhost:8000/api/v1');",
+					"",
+					"// Headers communs",
+					"pm.request.headers.add({",
+					"    key: 'Accept',",
+					"    value: 'application/json'",
+					"});",
+					"",
+					"pm.request.headers.add({",
+					"    key: 'Content-Type',",
+					"    value: 'application/json'",
+					"});",
+					"",
+					"// Ajout du token d'authentification si disponible",
+					"const authToken = pm.globals.get('auth_token');",
+					"if (authToken) {",
+					"    pm.request.headers.add({",
+					"        key: 'Authorization',",
+					"        value: 'Bearer ' + authToken",
+					"    });",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000/api/v1",
+			"type": "string"
+		},
+		{
+			"key": "auth_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "company_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "client_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "product_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "quote_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "invoice_id",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [

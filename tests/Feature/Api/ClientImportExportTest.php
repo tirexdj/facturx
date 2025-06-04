@@ -2,15 +2,14 @@
 
 namespace Tests\Feature\API;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
-use App\Models\User;
-use App\Models\Company;
-use App\Models\Client;
-use App\Models\ClientCategory;
+use App\Domain\Auth\Models\User;
+use Illuminate\Http\UploadedFile;
+use App\Domain\Company\Models\Company;
+use App\Domain\Customer\Models\Client;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Foundation\Testing\WithFaker;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
 class ClientImportExportTest extends TestCase
 {
@@ -43,7 +42,7 @@ class ClientImportExportTest extends TestCase
 
         $file = UploadedFile::fake()->createWithContent('clients.csv', $csvContent);
 
-        $response = $this->postJson('/api/clients/import', [
+        $response = $this->postJson('/api/v1/clients/import', [
             'file' => $file,
             'skip_header' => true,
             'delimiter' => ',',
@@ -97,7 +96,7 @@ class ClientImportExportTest extends TestCase
 
         $file = UploadedFile::fake()->createWithContent('clients.csv', $csvContent);
 
-        $response = $this->postJson('/api/clients/import', [
+        $response = $this->postJson('/api/v1/clients/import', [
             'file' => $file,
             'skip_header' => true,
             'mapping' => [
@@ -126,7 +125,7 @@ class ClientImportExportTest extends TestCase
 
         $file = UploadedFile::fake()->create('clients.txt', 100, 'text/plain');
 
-        $response = $this->postJson('/api/clients/import', [
+        $response = $this->postJson('/api/v1/clients/import', [
             'file' => $file,
         ]);
 
@@ -142,7 +141,7 @@ class ClientImportExportTest extends TestCase
         // Créer un fichier de plus de 5MB
         $file = UploadedFile::fake()->create('clients.csv', 6000, 'text/csv');
 
-        $response = $this->postJson('/api/clients/import', [
+        $response = $this->postJson('/api/v1/clients/import', [
             'file' => $file,
         ]);
 
@@ -162,7 +161,7 @@ class ClientImportExportTest extends TestCase
 
         $file = UploadedFile::fake()->createWithContent('clients.csv', $csvContent);
 
-        $response = $this->postJson('/api/clients/import', [
+        $response = $this->postJson('/api/v1/clients/import', [
             'file' => $file,
             'skip_header' => true,
             'mapping' => [
@@ -197,7 +196,7 @@ class ClientImportExportTest extends TestCase
 
         $file = UploadedFile::fake()->createWithContent('clients.csv', $csvContent);
 
-        $response = $this->postJson('/api/clients/import', [
+        $response = $this->postJson('/api/v1/clients/import', [
             'file' => $file,
             'skip_header' => true,
             'update_existing' => true,
@@ -224,7 +223,7 @@ class ClientImportExportTest extends TestCase
             'company_id' => $this->company->id,
         ]);
 
-        $response = $this->getJson('/api/clients/export?format=csv');
+        $response = $this->getJson('/api/v1/clients/export?format=csv');
 
         $response->assertStatus(200)
             ->assertHeader('content-type', 'text/csv; charset=UTF-8')
@@ -243,7 +242,7 @@ class ClientImportExportTest extends TestCase
             'company_id' => $this->company->id,
         ]);
 
-        $response = $this->getJson('/api/clients/export?format=xlsx');
+        $response = $this->getJson('/api/v1/clients/export?format=xlsx');
 
         $response->assertStatus(200)
             ->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -266,7 +265,7 @@ class ClientImportExportTest extends TestCase
             'name' => 'Prospect Company',
         ]);
 
-        $response = $this->getJson('/api/clients/export?format=csv&type=client');
+        $response = $this->getJson('/api/v1/clients/export?format=csv&type=client');
 
         $response->assertStatus(200);
 
@@ -278,7 +277,7 @@ class ClientImportExportTest extends TestCase
     /** @test */
     public function it_requires_file_for_import()
     {
-        $response = $this->postJson('/api/clients/import', []);
+        $response = $this->postJson('/api/v1/clients/import', []);
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['file']);
@@ -291,7 +290,7 @@ class ClientImportExportTest extends TestCase
 
         $file = UploadedFile::fake()->createWithContent('clients.csv', 'test');
 
-        $response = $this->postJson('/api/clients/import', [
+        $response = $this->postJson('/api/v1/clients/import', [
             'file' => $file,
             'delimiter' => 'invalid',
         ]);
@@ -307,7 +306,7 @@ class ClientImportExportTest extends TestCase
 
         $file = UploadedFile::fake()->createWithContent('clients.csv', 'test');
 
-        $response = $this->postJson('/api/clients/import', [
+        $response = $this->postJson('/api/v1/clients/import', [
             'file' => $file,
             'encoding' => 'invalid-encoding',
         ]);
@@ -323,7 +322,7 @@ class ClientImportExportTest extends TestCase
 
         $file = UploadedFile::fake()->createWithContent('clients.csv', '');
 
-        $response = $this->postJson('/api/clients/import', [
+        $response = $this->postJson('/api/v1/clients/import', [
             'file' => $file,
         ]);
 
@@ -351,7 +350,7 @@ class ClientImportExportTest extends TestCase
 
         $file = UploadedFile::fake()->createWithContent('clients.csv', $csvContent);
 
-        $response = $this->postJson('/api/clients/import', [
+        $response = $this->postJson('/api/v1/clients/import', [
             'file' => $file,
             'skip_header' => true,
             'mapping' => [

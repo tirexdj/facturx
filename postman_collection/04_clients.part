@@ -1,0 +1,179 @@
+		{
+			"name": "3. Client Management",
+			"item": [
+				{
+					"name": "Create Client",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Response has client data', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson).to.have.property('data');",
+									"    pm.expect(responseJson.data).to.have.property('id');",
+									"    pm.expect(responseJson.data).to.have.property('name');",
+									"});",
+									"",
+									"pm.test('Set client ID', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.globals.set('client_id', responseJson.data.id);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"type\": \"business\",\n    \"name\": \"Client Test SARL\",\n    \"siret\": \"98765432109876\",\n    \"vat_number\": \"FR12345678901\",\n    \"email\": \"client@test.com\",\n    \"phone\": \"+33987654321\",\n    \"address\": \"456 Avenue Client\",\n    \"postal_code\": \"69000\",\n    \"city\": \"Lyon\",\n    \"country\": \"France\",\n    \"payment_terms\": 30,\n    \"payment_method\": \"transfer\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/clients",
+							"host": ["{{base_url}}"],
+							"path": ["clients"]
+						}
+					}
+				},
+				{
+					"name": "List Clients",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has pagination', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson).to.have.property('data');",
+									"    pm.expect(responseJson).to.have.property('meta');",
+									"    pm.expect(responseJson.meta).to.have.property('pagination');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/clients?page=1&per_page=10&search=Test",
+							"host": ["{{base_url}}"],
+							"path": ["clients"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "per_page",
+									"value": "10"
+								},
+								{
+									"key": "search",
+									"value": "Test"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Client",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has client data', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson).to.have.property('data');",
+									"    pm.expect(responseJson.data).to.have.property('id');",
+									"    pm.expect(responseJson.data).to.have.property('name');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/clients/{{client_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["clients", "{{client_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Update Client",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has updated data', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson).to.have.property('data');",
+									"    pm.expect(responseJson.data).to.have.property('name');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Client Test SARL Updated\",\n    \"email\": \"client.updated@test.com\",\n    \"phone\": \"+33987654322\",\n    \"payment_terms\": 45\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/clients/{{client_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["clients", "{{client_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Delete Client",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 204', function () {",
+									"    pm.response.to.have.status(204);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/clients/{{client_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["clients", "{{client_id}}"]
+						}
+					}
+				}
+			]
+		},

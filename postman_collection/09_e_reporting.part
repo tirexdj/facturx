@@ -1,0 +1,198 @@
+		{
+			"name": "8. E-reporting",
+			"item": [
+				{
+					"name": "Get B2C Transactions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has B2C data', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson).to.have.property('data');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/e-reporting/b2c?start_date=2024-01-01&end_date=2024-01-31",
+							"host": ["{{base_url}}"],
+							"path": ["e-reporting", "b2c"],
+							"query": [
+								{
+									"key": "start_date",
+									"value": "2024-01-01"
+								},
+								{
+									"key": "end_date",
+									"value": "2024-01-31"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get International Transactions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has international data', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson).to.have.property('data');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/e-reporting/international?start_date=2024-01-01&end_date=2024-01-31&country=DE",
+							"host": ["{{base_url}}"],
+							"path": ["e-reporting", "international"],
+							"query": [
+								{
+									"key": "start_date",
+									"value": "2024-01-01"
+								},
+								{
+									"key": "end_date",
+									"value": "2024-01-31"
+								},
+								{
+									"key": "country",
+									"value": "DE"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Generate TVA Declaration Data",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has TVA data', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson).to.have.property('data');",
+									"    pm.expect(responseJson.data).to.have.property('period');",
+									"    pm.expect(responseJson.data).to.have.property('totals');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/e-reporting/tva-declaration?period=2024-01&type=monthly",
+							"host": ["{{base_url}}"],
+							"path": ["e-reporting", "tva-declaration"],
+							"query": [
+								{
+									"key": "period",
+									"value": "2024-01"
+								},
+								{
+									"key": "type",
+									"value": "monthly"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Submit E-reporting Data",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Submission successful', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson).to.have.property('message');",
+									"    pm.expect(responseJson).to.have.property('submission_id');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"period\": \"2024-01\",\n    \"type\": \"b2c\",\n    \"data\": {\n        \"daily_totals\": [\n            {\n                \"date\": \"2024-01-15\",\n                \"amount_ht\": 1000.00,\n                \"vat_amount\": 200.00,\n                \"vat_rate\": 20.0\n            }\n        ]\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/e-reporting/submit",
+							"host": ["{{base_url}}"],
+							"path": ["e-reporting", "submit"]
+						}
+					}
+				},
+				{
+					"name": "Get E-reporting Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has status data', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson).to.have.property('data');",
+									"    pm.expect(responseJson.data).to.have.property('submissions');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/e-reporting/status?period=2024-01",
+							"host": ["{{base_url}}"],
+							"path": ["e-reporting", "status"],
+							"query": [
+								{
+									"key": "period",
+									"value": "2024-01"
+								}
+							]
+						}
+					}
+				}
+			]
+		},

@@ -77,34 +77,45 @@ Route::prefix('v1')->group(function () {
             Route::delete('/{client}', [\App\Http\Controllers\Api\V1\Customer\ClientController::class, 'destroy']);
         });
 
+        // Categories routes
+        Route::prefix('categories')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\V1\Product\CategoryController::class, 'index']);
+            Route::post('/', [\App\Http\Controllers\Api\V1\Product\CategoryController::class, 'store']);
+            Route::get('/{category}', [\App\Http\Controllers\Api\V1\Product\CategoryController::class, 'show']);
+            Route::put('/{category}', [\App\Http\Controllers\Api\V1\Product\CategoryController::class, 'update']);
+            Route::delete('/{category}', [\App\Http\Controllers\Api\V1\Product\CategoryController::class, 'destroy']);
+        });
+
         // Products routes
-        // Route::prefix('products')->group(function () {
-        //     Route::get('/', [\App\Http\Controllers\Api\V1\Product\ProductController::class, 'index']);
-        //     Route::post('/', [\App\Http\Controllers\Api\V1\Product\ProductController::class, 'store']);
-        //     Route::get('/{product}', [\App\Http\Controllers\Api\V1\Product\ProductController::class, 'show']);
-        //     Route::put('/{product}', [\App\Http\Controllers\Api\V1\Product\ProductController::class, 'update']);
-        //     Route::delete('/{product}', [\App\Http\Controllers\Api\V1\Product\ProductController::class, 'destroy']);
-        // });
+        Route::prefix('products')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\V1\Product\ProductController::class, 'index']);
+            Route::post('/', [\App\Http\Controllers\Api\V1\Product\ProductController::class, 'store']);
+            Route::get('/{product}', [\App\Http\Controllers\Api\V1\Product\ProductController::class, 'show']);
+            Route::put('/{product}', [\App\Http\Controllers\Api\V1\Product\ProductController::class, 'update']);
+            Route::delete('/{product}', [\App\Http\Controllers\Api\V1\Product\ProductController::class, 'destroy']);
+        });
 
         // Services routes
-        // Route::prefix('services')->group(function () {
-        //     Route::get('/', [\App\Http\Controllers\Api\V1\Product\ServiceController::class, 'index']);
-        //     Route::post('/', [\App\Http\Controllers\Api\V1\Product\ServiceController::class, 'store']);
-        //     Route::get('/{service}', [\App\Http\Controllers\Api\V1\Product\ServiceController::class, 'show']);
-        //     Route::put('/{service}', [\App\Http\Controllers\Api\V1\Product\ServiceController::class, 'update']);
-        //     Route::delete('/{service}', [\App\Http\Controllers\Api\V1\Product\ServiceController::class, 'destroy']);
-        // });
+        Route::prefix('services')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\V1\Product\ServiceController::class, 'index']);
+            Route::post('/', [\App\Http\Controllers\Api\V1\Product\ServiceController::class, 'store']);
+            Route::get('/{service}', [\App\Http\Controllers\Api\V1\Product\ServiceController::class, 'show']);
+            Route::put('/{service}', [\App\Http\Controllers\Api\V1\Product\ServiceController::class, 'update']);
+            Route::delete('/{service}', [\App\Http\Controllers\Api\V1\Product\ServiceController::class, 'destroy']);
+        });
 
-        // // Quotes routes
-        // Route::prefix('quotes')->group(function () {
-        //     Route::get('/', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'index']);
-        //     Route::post('/', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'store']);
-        //     Route::get('/{quote}', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'show']);
-        //     Route::put('/{quote}', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'update']);
-        //     Route::delete('/{quote}', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'destroy']);
-        //     Route::post('/{quote}/send', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'send']);
-        //     Route::post('/{quote}/convert-to-invoice', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'convertToInvoice']);
-        // });
+        // Quotes routes
+        Route::prefix('quotes')->name('quotes.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'index']);
+            Route::post('/', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'store']);
+            Route::get('/{quote}', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'show']);
+            Route::put('/{quote}', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'update']);
+            Route::delete('/{quote}', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'destroy']);
+            Route::post('/{quote}/send', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'send']);
+            Route::post('/{quote}/duplicate', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'duplicate']);
+            Route::post('/{quote}/convert', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'convertToInvoice']);
+            Route::get('/{quote}/pdf', [\App\Http\Controllers\Api\V1\Quote\QuoteController::class, 'downloadPdf']);
+        });
 
         // // Invoices routes
         // Route::prefix('invoices')->group(function () {

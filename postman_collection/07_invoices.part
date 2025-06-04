@@ -1,0 +1,320 @@
+		{
+			"name": "6. Invoice Management",
+			"item": [
+				{
+					"name": "Create Invoice",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Response has invoice data', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson).to.have.property('data');",
+									"    pm.expect(responseJson.data).to.have.property('id');",
+									"    pm.expect(responseJson.data).to.have.property('number');",
+									"});",
+									"",
+									"pm.test('Set invoice ID', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.globals.set('invoice_id', responseJson.data.id);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"client_id\": \"{{client_id}}\",\n    \"issue_date\": \"2024-01-20\",\n    \"due_date\": \"2024-02-20\",\n    \"notes\": \"Facture pour produits électroniques\",\n    \"payment_terms\": 30,\n    \"items\": [\n        {\n            \"product_id\": \"{{product_id}}\",\n            \"quantity\": 2,\n            \"unit_price\": 99.99,\n            \"vat_rate\": 20.0,\n            \"discount_percentage\": 0\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/invoices",
+							"host": ["{{base_url}}"],
+							"path": ["invoices"]
+						}
+					}
+				},
+				{
+					"name": "List Invoices",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has pagination', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson).to.have.property('data');",
+									"    pm.expect(responseJson).to.have.property('meta');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/invoices?page=1&per_page=10&filter[status]=draft&sort=-issue_date",
+							"host": ["{{base_url}}"],
+							"path": ["invoices"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "per_page",
+									"value": "10"
+								},
+								{
+									"key": "filter[status]",
+									"value": "draft"
+								},
+								{
+									"key": "sort",
+									"value": "-issue_date"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Invoice",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has invoice data with items', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson).to.have.property('data');",
+									"    pm.expect(responseJson.data).to.have.property('items');",
+									"    pm.expect(responseJson.data).to.have.property('client');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/invoices/{{invoice_id}}?include=items,client,payments",
+							"host": ["{{base_url}}"],
+							"path": ["invoices", "{{invoice_id}}"],
+							"query": [
+								{
+									"key": "include",
+									"value": "items,client,payments"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Invoice",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has updated data', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson).to.have.property('data');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"notes\": \"Facture mise à jour\",\n    \"due_date\": \"2024-03-20\",\n    \"items\": [\n        {\n            \"product_id\": \"{{product_id}}\",\n            \"quantity\": 3,\n            \"unit_price\": 99.99,\n            \"vat_rate\": 20.0,\n            \"discount_percentage\": 5\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/invoices/{{invoice_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["invoices", "{{invoice_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Send Invoice",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Invoice status updated to sent', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.data.status).to.equal('sent');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email_subject\": \"Votre facture\",\n    \"email_message\": \"Veuillez trouver ci-joint votre facture.\",\n    \"send_copy\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/invoices/{{invoice_id}}/send",
+							"host": ["{{base_url}}"],
+							"path": ["invoices", "{{invoice_id}}", "send"]
+						}
+					}
+				},
+				{
+					"name": "Generate Electronic Invoice",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has electronic formats', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson).to.have.property('data');",
+									"    pm.expect(responseJson.data).to.have.property('formats');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"formats\": [\"ubl\", \"cii\", \"factur-x\"],\n    \"transmit_to_pdp\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/invoices/{{invoice_id}}/generate-electronic",
+							"host": ["{{base_url}}"],
+							"path": ["invoices", "{{invoice_id}}", "generate-electronic"]
+						}
+					}
+				},
+				{
+					"name": "Get Invoice PDF",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response is PDF', function () {",
+									"    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/invoices/{{invoice_id}}/pdf",
+							"host": ["{{base_url}}"],
+							"path": ["invoices", "{{invoice_id}}", "pdf"]
+						}
+					}
+				},
+				{
+					"name": "Get Outstanding Invoices",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has outstanding invoices', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson).to.have.property('data');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/invoices/outstanding",
+							"host": ["{{base_url}}"],
+							"path": ["invoices", "outstanding"]
+						}
+					}
+				},
+				{
+					"name": "Generate Payment Reminder",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Reminder sent successfully', function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson).to.have.property('message');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"reminder_type\": \"first\",\n    \"custom_message\": \"Rappel aimable de paiement\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/invoices/{{invoice_id}}/reminder",
+							"host": ["{{base_url}}"],
+							"path": ["invoices", "{{invoice_id}}", "reminder"]
+						}
+					}
+				}
+			]
+		},

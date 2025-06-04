@@ -3,21 +3,17 @@
 namespace App\Domain\Product\Models;
 
 use App\Domain\Company\Models\Company;
-use App\Domain\Customer\Models\Category;
-use App\Domain\Invoice\Models\InvoiceLine;
-use App\Domain\Quote\Models\QuoteLine;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Database\Factories\Domain\Product\Models\ServiceFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Spatie\MediaLibrary\HasMedia;
-use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
-class Service extends Model implements HasMedia
+class Service extends Model
 {
-    use HasFactory, HasUuids, SoftDeletes, InteractsWithMedia;
+    use HasFactory, SoftDeletes, LogsActivity;
 
     /**
      * The attributes that are mass assignable.
@@ -26,24 +22,19 @@ class Service extends Model implements HasMedia
      */
     protected $fillable = [
         'company_id',
-        'reference',
+        'category_id',
         'name',
-        'slug',
         'description',
-        'long_description',
-        'price_net',
+        'unit_price',
         'cost_price',
-        'vat_rate_id',
-        'unit_id',
+        'vat_rate',
+        'unit',
         'duration',
         'is_recurring',
-        'recurrence_interval',
-        'category_id',
+        'recurring_period',
+        'setup_fee',
         'is_active',
-        'tags',
-        'custom_fields',
-        'created_by',
-        'updated_by',
+        'options',
     ];
 
     /**
@@ -52,26 +43,33 @@ class Service extends Model implements HasMedia
      * @var array<string, string>
      */
     protected $casts = [
-        'price_net' => 'decimal:5',
-        'cost_price' => 'decimal:5',
+        'unit_price' => 'decimal:2',
+        'cost_price' => 'decimal:2',
+        'vat_rate' => 'decimal:2',
+        'setup_fee' => 'decimal:2',
         'duration' => 'integer',
         'is_recurring' => 'boolean',
         'is_active' => 'boolean',
-        'tags' => 'json',
-        'custom_fields' => 'json',
+        'options' => 'json',
     ];
 
     /**
-     * Register media collections for the service.
+     * Create a new factory instance for the model.
      */
-    public function registerMediaCollections(): void
+    protected static function newFactory()
     {
-        $this->addMediaCollection('images');
-        
-        $this->addMediaCollection('thumbnail')
-            ->singleFile();
-            
-        $this->addMediaCollection('documents');
+        return ServiceFactory::new();
+    }
+
+    /**
+     * Get the activity log options.
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['name', 'unit_price', 'cost_price', 'vat_rate', 'is_active'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 
     /**
@@ -83,22 +81,6 @@ class Service extends Model implements HasMedia
     }
 
     /**
-     * Get the VAT rate that the service belongs to.
-     */
-    public function vatRate(): BelongsTo
-    {
-        return $this->belongsTo(VatRate::class);
-    }
-
-    /**
-     * Get the unit that the service belongs to.
-     */
-    public function unit(): BelongsTo
-    {
-        return $this->belongsTo(Unit::class);
-    }
-
-    /**
      * Get the category that the service belongs to.
      */
     public function category(): BelongsTo
@@ -107,43 +89,39 @@ class Service extends Model implements HasMedia
     }
 
     /**
-     * Get the quote lines that include this service.
+     * Calculate the margin amount.
      */
-    public function quoteLines(): HasMany
+    public function getMarginAttribute(): ?float
     {
-        return $this->hasMany(QuoteLine::class);
-    }
-
-    /**
-     * Get the invoice lines that include this service.
-     */
-    public function invoiceLines(): HasMany
-    {
-        return $this->hasMany(InvoiceLine::class);
-    }
-
-    /**
-     * Calculate the price with VAT.
-     */
-    public function getPriceGrossAttribute()
-    {
-        if ($this->relationLoaded('vatRate')) {
-            return $this->price_net * (1 + $this->vatRate->rate / 100);
+        if (!$this->cost_price) {
+            return null;
         }
         
-        return $this->price_net;
+        return $this->unit_price - $this->cost_price;
     }
 
     /**
      * Calculate the margin as a percentage.
      */
-    public function getMarginPercentAttribute()
+    public function getMarginPercentageAttribute(): ?float
     {
-        if (empty($this->cost_price) || $this->cost_price == 0) {
+        if (!$this->cost_price || $this->cost_price == 0) {
             return null;
         }
         
-        return (($this->price_net - $this->cost_price) / $this->cost_price) * 100;
+        return round((($this->unit_price - $this->cost_price) / $this->cost_price) * 100, 2);
+    }
+
+    /**
+     * Calculate the total price including setup fee.
+     */
+    public function getTotalPriceWithSetupAttribute(): ?float
+    {
+        if (!$this->setup_fee) {
+            return null;
+        }
+        
+        return $this->unit_price + $this->setup_fee;
     }
 
     /**
@@ -169,12 +147,20 @@ class Service extends Model implements HasMedia
     {
         return $query->where('category_id', $categoryId);
     }
-    
+
     /**
-     * Scope a query to filter services by tag.
+     * Scope a query to filter services by company.
      */
-    public function scopeWithTag($query, $tag)
+    public function scopeForCompany($query, $companyId)
     {
-        return $query->where('tags', 'like', '%' . $tag . '%');
+        return $query->where('company_id', $companyId);
+    }
+
+    /**
+     * Scope a query to filter services by unit.
+     */
+    public function scopeByUnit($query, $unit)
+    {
+        return $query->where('unit', $unit);
     }
 }
